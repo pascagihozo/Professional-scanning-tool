@@ -23,19 +23,11 @@ if ! command -v mvn &> /dev/null; then
     exit 1
 fi
 
-echo "Building Pascal Scanning Client..."
-echo
-
-# Build the project
-mvn clean package
-if [ $? -ne 0 ]; then
-    echo "ERROR: Maven build failed"
-    exit 1
-fi
-
-echo
 echo "Creating macOS installer..."
 echo
+
+# Create dist directory if it doesn't exist
+mkdir -p dist
 
 # Create installer using jpackage
 jpackage \

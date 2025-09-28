@@ -71,8 +71,7 @@ jobs:
       
     - name: Create Windows installer
       run: |
-        cd packaging/windows
-        .\package.bat
+        packaging/windows/package.bat
         
     - name: Upload Windows installer
       uses: actions/upload-artifact@v4
@@ -107,9 +106,8 @@ jobs:
       
     - name: Create macOS installer
       run: |
-        cd packaging/macos
-        chmod +x package.sh
-        ./package.sh
+        chmod +x packaging/macos/package.sh
+        packaging/macos/package.sh
         
     - name: Upload macOS installer
       uses: actions/upload-artifact@v4
@@ -144,9 +142,8 @@ jobs:
       
     - name: Create Linux installer
       run: |
-        cd packaging/linux
-        chmod +x package.sh
-        ./package.sh
+        chmod +x packaging/linux/package.sh
+        packaging/linux/package.sh
         
     - name: Upload Linux installer
       uses: actions/upload-artifact@v4

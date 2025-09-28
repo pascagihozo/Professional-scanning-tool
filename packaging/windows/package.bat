@@ -27,20 +27,11 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-echo Building Pascal Scanning Client...
-echo.
-
-REM Build the project
-call mvn clean package
-if %errorlevel% neq 0 (
-    echo ERROR: Maven build failed
-    pause
-    exit /b 1
-)
-
-echo.
 echo Creating Windows installer...
 echo.
+
+REM Create dist directory if it doesn't exist
+if not exist dist mkdir dist
 
 REM Create installer using jpackage
 jpackage ^
