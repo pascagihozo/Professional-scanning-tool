@@ -27,17 +27,27 @@
       <artifactId>itextpdf</artifactId>
       <version>5.5.10</version>
     </dependency>
-    <!-- SpringDoc OpenAPI removed due to Jackson dependency conflicts -->
-    <!-- Optional: Windows-only. Place jacob.jar in lib/ to enable compile. -->
-    <dependency>
-      <groupId>net.sf.jacob-project</groupId>
-      <artifactId>jacob</artifactId>
-      <version>1.21</version>
-      <scope>system</scope>
-      <systemPath>${project.basedir}/lib/jacob.jar</systemPath>
-      <optional>true</optional>
-    </dependency>
   </dependencies>
+
+  <profiles>
+    <profile>
+      <id>jacob</id>
+      <activation>
+        <file>
+          <exists>lib/jacob.jar</exists>
+        </file>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>net.sf.jacob-project</groupId>
+          <artifactId>jacob</artifactId>
+          <version>1.21</version>
+          <scope>system</scope>
+          <systemPath>${project.basedir}/lib/jacob.jar</systemPath>
+        </dependency>
+      </dependencies>
+    </profile>
+  </profiles>
 
   <build>
     <plugins>
@@ -47,7 +57,7 @@
         <version>${spring.boot.version}</version>
         <configuration>
           <mainClass>com.lci.scannerdesktop.ScannerDesktopApplication</mainClass>
-          <!-- Ensure system-scoped deps (jacob.jar) are included in the executable JAR -->
+          <!-- Include system-scoped dependencies only if they exist -->
           <includeSystemScope>true</includeSystemScope>
         </configuration>
       </plugin>

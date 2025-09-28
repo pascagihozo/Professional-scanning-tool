@@ -52,6 +52,15 @@ public class WIAService {
     public List<ScannerInfo> discoverScanners() {
         List<ScannerInfo> list = new ArrayList<>();
         if (!isWindows() || !config.isEnabled()) return list;
+        
+        // Check if JACOB is available
+        try {
+            Class.forName("com.jacob.com.ComThread");
+        } catch (ClassNotFoundException e) {
+            log.warn("JACOB library not available. WIA scanning disabled. Install jacob.jar in lib/ directory to enable Windows WIA support.");
+            return list;
+        }
+        
         try {
             // Initialize COM (STA) for JACOB interactions
             com.jacob.com.ComThread.InitSTA();
@@ -129,6 +138,16 @@ public class WIAService {
             r.message = "WIA disabled. Set wia.enabled=true and install JACOB/JNA.";
             return r;
         }
+        
+        // Check if JACOB is available
+        try {
+            Class.forName("com.jacob.com.ComThread");
+        } catch (ClassNotFoundException e) {
+            r.status = "ERROR";
+            r.message = "JACOB library not available. Install jacob.jar in lib/ directory to enable Windows WIA support.";
+            return r;
+        }
+        
         try {
             com.jacob.com.ComThread.InitSTA();
             // Connect to scanner
