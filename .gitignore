@@ -12,6 +12,7 @@
 
 # Package Files
 *.jar
+!lib/jacob.jar
 *.war
 *.nar
 *.ear
