@@ -1,0 +1,85 @@
+name: Build Pascal Scanning Client
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  release:
+    types: [ published ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        
+    - name: Cache Maven dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.m2
+        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+        restore-keys: ${{ runner.os }}-m2
+        
+    - name: Build with Maven
+      run: mvn -f scanner-desktop-client/pom.xml clean package
+      
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: pascal-scanning-client-jar
+        path: scanner-desktop-client/target/scanner-desktop-client.jar
+
+  build-installers:
+    needs: build
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+        
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        
+    - name: Download build artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: pascal-scanning-client-jar
+        path: scanner-desktop-client/target/
+        
+    - name: Create Windows Installer
+      if: matrix.os == 'windows-latest'
+      run: |
+        cd scanner-desktop-client
+        jpackage --input target --main-jar scanner-desktop-client.jar --main-class com.lci.scannerdesktop.ScannerDesktopApplication --name "Pascal Scanning Client" --app-version 1.0.0 --vendor "Pascal Gihozo" --description "Professional Document Scanning Solution" --type exe --dest packaging/windows
+        
+    - name: Create macOS Installer
+      if: matrix.os == 'macos-latest'
+      run: |
+        cd scanner-desktop-client
+        jpackage --input target --main-jar scanner-desktop-client.jar --main-class com.lci.scannerdesktop.ScannerDesktopApplication --name "Pascal Scanning Client" --app-version 1.0.0 --vendor "Pascal Gihozo" --description "Professional Document Scanning Solution" --type pkg --dest packaging/macos
+        
+    - name: Create Linux Installer
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        cd scanner-desktop-client
+        jpackage --input target --main-jar scanner-desktop-client.jar --main-class com.lci.scannerdesktop.ScannerDesktopApplication --name "Pascal Scanning Client" --app-version 1.0.0 --vendor "Pascal Gihozo" --description "Professional Document Scanning Solution" --type deb --dest packaging/linux
+        
+    - name: Upload Installers
+      uses: actions/upload-artifact@v3
+      with:
+        name: pascal-scanning-client-${{ matrix.os }}
+        path: scanner-desktop-client/packaging/*/

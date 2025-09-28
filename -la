@@ -1,0 +1,27 @@
+  create-folio-scanning[m
+  feature/enhanced-context-management[m
+  main[m
+  new/enhanced-context-management-FIX[m
+  new/scanTransferFIX-copy[m
+* [32mpascal-scanning-client[m
+  scanTransferFIX[m
+  scanningFeatureFolio[m
+  [31mremotes/origin/COPY--feature/enhanced-context-management[m
+  [31mremotes/origin/HEAD[m -> origin/main
+  [31mremotes/origin/Lyse[m
+  [31mremotes/origin/ROG[m
+  [31mremotes/origin/create-folio-scanning[m
+  [31mremotes/origin/dynamic-db-config-[m
+  [31mremotes/origin/feature/copy/scanbase-enhanced-context-management[m
+  [31mremotes/origin/feature/enhanced-context-management[m
+  [31mremotes/origin/feature/enhanced-context-management-infohighway[m
+  [31mremotes/origin/feature/multitenancy-base[m
+  [31mremotes/origin/feature/redirection-layer[m
+  [31mremotes/origin/hishamEDMS[m
+  [31mremotes/origin/main[m
+  [31mremotes/origin/pascalEdms[m
+  [31mremotes/origin/rog0206[m
+  [31mremotes/origin/scanFeatureEnhancement[m
+  [31mremotes/origin/scanTransferFIX[m
+  [31mremotes/origin/scanTransferFIX-dynamic[m
+  [31mremotes/origin/scanning-base/enhanced-context-management[m
