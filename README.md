@@ -45,6 +45,8 @@ Pascal Scanning Tool is a modern, enterprise-ready desktop application that prov
 | **macOS** | [pascal-scanning-tool-1.0.0.pkg](releases/macos/pascal-scanning-tool-1.0.0.pkg) | ~50MB |
 | **Linux** | [pascal-scanning-tool-1.0.0.deb](releases/linux/pascal-scanning-tool-1.0.0.deb) | ~50MB |
 
+> **Note**: Installers are automatically built by GitHub Actions and will be available as release assets once the CI/CD pipeline completes successfully.
+
 ### **System Requirements**
 
 - **Java**: JDK 17 or higher
