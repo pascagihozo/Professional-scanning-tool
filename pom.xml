@@ -27,27 +27,16 @@
       <artifactId>itextpdf</artifactId>
       <version>5.5.10</version>
     </dependency>
+    <!-- JACOB library for Windows WIA support -->
+    <dependency>
+      <groupId>net.sf.jacob-project</groupId>
+      <artifactId>jacob</artifactId>
+      <version>1.21</version>
+      <scope>system</scope>
+      <systemPath>${project.basedir}/lib/jacob.jar</systemPath>
+      <optional>true</optional>
+    </dependency>
   </dependencies>
-
-  <profiles>
-    <profile>
-      <id>jacob</id>
-      <activation>
-        <file>
-          <exists>lib/jacob.jar</exists>
-        </file>
-      </activation>
-      <dependencies>
-        <dependency>
-          <groupId>net.sf.jacob-project</groupId>
-          <artifactId>jacob</artifactId>
-          <version>1.21</version>
-          <scope>system</scope>
-          <systemPath>${project.basedir}/lib/jacob.jar</systemPath>
-        </dependency>
-      </dependencies>
-    </profile>
-  </profiles>
 
   <build>
     <plugins>
@@ -57,7 +46,7 @@
         <version>${spring.boot.version}</version>
         <configuration>
           <mainClass>com.lci.scannerdesktop.ScannerDesktopApplication</mainClass>
-          <!-- Include system-scoped dependencies only if they exist -->
+          <!-- Include system-scoped dependencies (jacob.jar) in the executable JAR -->
           <includeSystemScope>true</includeSystemScope>
         </configuration>
       </plugin>
