@@ -1,8 +1,8 @@
-# EDMS Scanning System - Cross-Platform Architecture
+#  Scanning System - Cross-Platform Architecture
 
 ## Overview
 
-The EDMS scanning system provides **universal scanning capabilities** across all operating systems and devices through a combination of server-side and client-side technologies. This architecture ensures that users can scan documents regardless of their operating system (Windows, macOS, Linux) or device type (desktop, laptop, mobile).
+The scanning system provides **universal scanning capabilities** across all operating systems and devices through a combination of server-side and client-side technologies. This architecture ensures that users can scan documents regardless of their operating system (Windows, macOS, Linux) or device type (desktop, laptop, mobile).
 
 ## Architecture Diagram
 
@@ -227,34 +227,6 @@ network:
    - Check token expiration (5 minutes)
    - Ensure mobile device can access server
 
-### **Debug Information**
-
-Access scanner status and debug information:
-
-```bash
-# Get all scanners
-GET /edms/api/scanner-management/scanners
-
-# Get network scanner status
-GET /edms/api/scanner-management/network-scanners
-
-# Get scanner discovery status
-GET /edms/api/scanner-management/status
-
-# Force refresh discovery
-POST /edms/api/scanner-management/refresh
-```
-
-### **Logging**
-
-Enable debug logging for scanner services:
-
-```yaml
-logging:
-  level:
-    com.lci.edms.service: DEBUG
-    com.lci.edms.controller: DEBUG
-```
 
 ## Deployment Checklist
 
