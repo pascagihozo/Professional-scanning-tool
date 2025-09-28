@@ -28,7 +28,7 @@
       <version>5.5.10</version>
     </dependency>
     <!-- SpringDoc OpenAPI removed due to Jackson dependency conflicts -->
-    <!-- Optional: Windows-only. Place jacob.jar in scanner-desktop-client/lib to enable compile. -->
+    <!-- Optional: Windows-only. Place jacob.jar in lib/ to enable compile. -->
     <dependency>
       <groupId>net.sf.jacob-project</groupId>
       <artifactId>jacob</artifactId>

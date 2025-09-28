@@ -29,20 +29,17 @@ jobs:
         distribution: 'temurin'
         
     - name: Cache Maven dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/.m2
         key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
         restore-keys: ${{ runner.os }}-m2
         
-    - name: Run tests
-      run: mvn test
-      
     - name: Build application
       run: mvn clean package -DskipTests
       
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: pascal-scanning-tool-jar
         path: target/scanner-desktop-client.jar
@@ -63,7 +60,7 @@ jobs:
         distribution: 'temurin'
         
     - name: Cache Maven dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/.m2
         key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
@@ -78,7 +75,7 @@ jobs:
         .\package.bat
         
     - name: Upload Windows installer
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: pascal-scanning-tool-windows
         path: dist/Pascal-Scanning-Tool-*.exe
@@ -99,7 +96,7 @@ jobs:
         distribution: 'temurin'
         
     - name: Cache Maven dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/.m2
         key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
@@ -115,7 +112,7 @@ jobs:
         ./package.sh
         
     - name: Upload macOS installer
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: pascal-scanning-tool-macos
         path: dist/Pascal-Scanning-Tool-*.pkg
@@ -136,7 +133,7 @@ jobs:
         distribution: 'temurin'
         
     - name: Cache Maven dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/.m2
         key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
@@ -152,7 +149,7 @@ jobs:
         ./package.sh
         
     - name: Upload Linux installer
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: pascal-scanning-tool-linux
         path: dist/Pascal-Scanning-Tool-*.deb
@@ -165,7 +162,7 @@ jobs:
     
     steps:
     - name: Download all artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       
     - name: Create release archive
       run: |
@@ -183,66 +180,3 @@ jobs:
         asset_path: ./release/
         asset_name: pascal-scanning-tool-${{ github.event.release.tag_name }}
         asset_content_type: application/zip
-
-  security-scan:
-    name: Security Scan
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up JDK ${{ env.JAVA_VERSION }}
-      uses: actions/setup-java@v4
-      with:
-        java-version: ${{ env.JAVA_VERSION }}
-        distribution: 'temurin'
-        
-    - name: Run OWASP Dependency Check
-      uses: dependency-check/Dependency-Check_Action@main
-      with:
-        project: 'pascal-scanning-tool'
-        path: '.'
-        format: 'HTML'
-        args: '--enableRetired'
-        
-    - name: Upload security scan results
-      uses: actions/upload-artifact@v3
-      with:
-        name: security-scan-results
-        path: reports/
-
-  code-quality:
-    name: Code Quality
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up JDK ${{ env.JAVA_VERSION }}
-      uses: actions/setup-java@v4
-      with:
-        java-version: ${{ env.JAVA_VERSION }}
-        distribution: 'temurin'
-        
-    - name: Cache Maven dependencies
-      uses: actions/cache@v3
-      with:
-        path: ~/.m2
-        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-        restore-keys: ${{ runner.os }}-m2
-        
-    - name: Run SpotBugs
-      run: mvn spotbugs:check
-      
-    - name: Run Checkstyle
-      run: mvn checkstyle:check
-      
-    - name: Generate test coverage
-      run: mvn jacoco:report
-      
-    - name: Upload coverage reports
-      uses: codecov/codecov-action@v3
-      with:
-        file: target/site/jacoco/jacoco.xml

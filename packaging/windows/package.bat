@@ -31,7 +31,7 @@ echo Building Pascal Scanning Client...
 echo.
 
 REM Build the project
-call mvn -f scanner-desktop-client/pom.xml clean package
+call mvn clean package
 if %errorlevel% neq 0 (
     echo ERROR: Maven build failed
     pause
@@ -43,24 +43,23 @@ echo Creating Windows installer...
 echo.
 
 REM Create installer using jpackage
-cd scanner-desktop-client
 jpackage ^
     --input target ^
     --main-jar scanner-desktop-client.jar ^
     --main-class com.lci.scannerdesktop.ScannerDesktopApplication ^
-    --name "Pascal Scanning Client" ^
+    --name "Pascal Scanning Tool" ^
     --app-version 1.0.0 ^
     --vendor "Pascal Gihozo" ^
     --description "Professional Document Scanning Solution" ^
     --copyright "Copyright (c) 2025 Pascal Gihozo" ^
     --license-file ../LICENSE ^
     --type exe ^
-    --dest packaging/windows ^
-    --icon packaging/windows/pascal.ico ^
+    --dest dist ^
+    --icon pascal.ico ^
     --win-console ^
     --win-shortcut ^
     --win-menu ^
-    --win-menu-group "Pascal Scanning Client" ^
+    --win-menu-group "Pascal Scanning Tool" ^
     --win-dir-chooser ^
     --win-per-user-install
 
@@ -75,7 +74,7 @@ echo ========================================
 echo   Build completed successfully!
 echo ========================================
 echo.
-echo Installer created: packaging/windows/Pascal Scanning Client-1.0.0.exe
+echo Installer created: dist/Pascal Scanning Tool-1.0.0.exe
 echo.
 echo You can now distribute this installer to users.
 echo.

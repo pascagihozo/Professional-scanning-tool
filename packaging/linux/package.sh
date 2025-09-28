@@ -27,7 +27,7 @@ echo "Building Pascal Scanning Client..."
 echo
 
 # Build the project
-mvn -f scanner-desktop-client/pom.xml clean package
+mvn clean package
 if [ $? -ne 0 ]; then
     echo "ERROR: Maven build failed"
     exit 1
@@ -38,21 +38,19 @@ echo "Creating Linux installers..."
 echo
 
 # Create DEB installer
-cd scanner-desktop-client
 jpackage \
     --input target \
     --main-jar scanner-desktop-client.jar \
     --main-class com.lci.scannerdesktop.ScannerDesktopApplication \
-    --name "Pascal Scanning Client" \
+    --name "Pascal Scanning Tool" \
     --app-version 1.0.0 \
     --vendor "Pascal Gihozo" \
     --description "Professional Document Scanning Solution" \
     --copyright "Copyright (c) 2025 Pascal Gihozo" \
     --license-file ../LICENSE \
     --type deb \
-    --dest packaging/linux \
-    --icon packaging/linux/pascal.png \
-    --linux-package-name "pascal-scanning-client" \
+    --dest dist \
+    --linux-package-name "pascal-scanning-tool" \
     --linux-package-deps "default-jre" \
     --linux-menu-group "Office" \
     --linux-shortcut
@@ -62,38 +60,12 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# Create RPM installer
-jpackage \
-    --input target \
-    --main-jar scanner-desktop-client.jar \
-    --main-class com.lci.scannerdesktop.ScannerDesktopApplication \
-    --name "Pascal Scanning Client" \
-    --app-version 1.0.0 \
-    --vendor "Pascal Gihozo" \
-    --description "Professional Document Scanning Solution" \
-    --copyright "Copyright (c) 2025 Pascal Gihozo" \
-    --license-file ../LICENSE \
-    --type rpm \
-    --dest packaging/linux \
-    --icon packaging/linux/pascal.png \
-    --linux-package-name "pascal-scanning-client" \
-    --linux-package-deps "java-17-openjdk" \
-    --linux-menu-group "Office" \
-    --linux-shortcut
-
-if [ $? -ne 0 ]; then
-    echo "ERROR: jpackage failed to create RPM installer"
-    exit 1
-fi
-
 echo
 echo "========================================"
 echo "  Build completed successfully!"
 echo "========================================"
 echo
-echo "Installers created:"
-echo "  - packaging/linux/pascal-scanning-client_1.0.0-1_amd64.deb"
-echo "  - packaging/linux/pascal-scanning-client-1.0.0-1.x86_64.rpm"
+echo "Installer created: dist/pascal-scanning-tool_1.0.0-1_amd64.deb"
 echo
 echo "You can now distribute these installers to users."
 echo

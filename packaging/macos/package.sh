@@ -27,7 +27,7 @@ echo "Building Pascal Scanning Client..."
 echo
 
 # Build the project
-mvn -f scanner-desktop-client/pom.xml clean package
+mvn clean package
 if [ $? -ne 0 ]; then
     echo "ERROR: Maven build failed"
     exit 1
@@ -38,24 +38,20 @@ echo "Creating macOS installer..."
 echo
 
 # Create installer using jpackage
-cd scanner-desktop-client
 jpackage \
     --input target \
     --main-jar scanner-desktop-client.jar \
     --main-class com.lci.scannerdesktop.ScannerDesktopApplication \
-    --name "Pascal Scanning Client" \
+    --name "Pascal Scanning Tool" \
     --app-version 1.0.0 \
     --vendor "Pascal Gihozo" \
     --description "Professional Document Scanning Solution" \
     --copyright "Copyright (c) 2025 Pascal Gihozo" \
     --license-file ../LICENSE \
     --type pkg \
-    --dest packaging/macos \
-    --icon packaging/macos/pascal.icns \
+    --dest dist \
     --mac-package-identifier com.pascagihozo.scanner \
-    --mac-package-name "Pascal Scanning Client" \
-    --mac-package-signing-prefix "Pascal Scanning Client" \
-    --mac-sign
+    --mac-package-name "Pascal Scanning Tool"
 
 if [ $? -ne 0 ]; then
     echo "ERROR: jpackage failed to create installer"
@@ -67,7 +63,7 @@ echo "========================================"
 echo "  Build completed successfully!"
 echo "========================================"
 echo
-echo "Installer created: packaging/macos/Pascal Scanning Client-1.0.0.pkg"
+echo "Installer created: dist/Pascal Scanning Tool-1.0.0.pkg"
 echo
 echo "You can now distribute this installer to users."
 echo
