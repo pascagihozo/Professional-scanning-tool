@@ -172,6 +172,128 @@ mvn clean package
 mvn spring-boot:run
 ```
 
+### **Creating Native Installers Locally**
+
+#### **Windows Installer (.exe)**
+
+```bash
+# Prerequisites: JDK 17+ with jpackage tool
+# Build the application first
+mvn clean package
+
+# Create Windows installer
+packaging/windows/package.bat
+
+# Installer will be created at: dist/Pascal-Scanning-Tool-1.0.0.exe
+```
+
+#### **macOS Installer (.pkg)**
+
+```bash
+# Prerequisites: JDK 17+ with jpackage tool, macOS system
+# Build the application first
+mvn clean package
+
+# Create macOS installer
+chmod +x packaging/macos/package.sh
+packaging/macos/package.sh
+
+# Installer will be created at: dist/Pascal-Scanning-Tool-1.0.0.pkg
+```
+
+#### **Linux Installer (.deb)**
+
+```bash
+# Prerequisites: JDK 17+ with jpackage tool, Linux system
+# Build the application first
+mvn clean package
+
+# Create Linux installer
+chmod +x packaging/linux/package.sh
+packaging/linux/package.sh
+
+# Installer will be created at: dist/Pascal-Scanning-Tool-1.0.0.deb
+```
+
+### **Automated Build Scripts**
+
+The project includes automated packaging scripts in the `packaging/` directory:
+
+- **`packaging/windows/package.bat`**: Windows installer creation
+- **`packaging/macos/package.sh`**: macOS installer creation  
+- **`packaging/linux/package.sh`**: Linux installer creation
+
+Each script:
+1. ✅ Checks for Java 17+ and Maven
+2. ✅ Builds the application with Maven
+3. ✅ Creates native installer using `jpackage`
+4. ✅ Places installer in `dist/` directory
+
+### **Manual jpackage Commands**
+
+If you prefer to run `jpackage` directly:
+
+#### **Windows**
+```bash
+jpackage \
+    --input target \
+    --main-jar scanner-desktop-client.jar \
+    --main-class com.lci.scannerdesktop.ScannerDesktopApplication \
+    --name "Pascal Scanning Tool" \
+    --app-version 1.0.0 \
+    --vendor "Pascal Gihozo" \
+    --description "Professional Document Scanning Solution" \
+    --copyright "Copyright (c) 2025 Pascal Gihozo" \
+    --license-file LICENSE \
+    --type exe \
+    --dest dist \
+    --icon packaging/windows/pascal.ico \
+    --win-console \
+    --win-shortcut \
+    --win-menu \
+    --win-menu-group "Pascal Scanning Tool" \
+    --win-dir-chooser \
+    --win-per-user-install
+```
+
+#### **macOS**
+```bash
+jpackage \
+    --input target \
+    --main-jar scanner-desktop-client.jar \
+    --main-class com.lci.scannerdesktop.ScannerDesktopApplication \
+    --name "Pascal Scanning Tool" \
+    --app-version 1.0.0 \
+    --vendor "Pascal Gihozo" \
+    --description "Professional Document Scanning Solution" \
+    --copyright "Copyright (c) 2025 Pascal Gihozo" \
+    --license-file LICENSE \
+    --type pkg \
+    --dest dist \
+    --mac-package-identifier com.pascagihozo.scanner \
+    --mac-package-name "Pascal Scanning Tool"
+```
+
+#### **Linux**
+```bash
+jpackage \
+    --input target \
+    --main-jar scanner-desktop-client.jar \
+    --main-class com.lci.scannerdesktop.ScannerDesktopApplication \
+    --name "Pascal Scanning Tool" \
+    --app-version 1.0.0 \
+    --vendor "Pascal Gihozo" \
+    --description "Professional Document Scanning Solution" \
+    --copyright "Copyright (c) 2025 Pascal Gihozo" \
+    --license-file LICENSE \
+    --type deb \
+    --dest dist \
+    --linux-package-name "pascal-scanning-tool" \
+    --linux-package-deps "default-jre" \
+    --linux-menu-group "Office" \
+    --linux-shortcut
+```
+
 ### **Development Setup**
 
 1. **Fork** the repository on GitHub

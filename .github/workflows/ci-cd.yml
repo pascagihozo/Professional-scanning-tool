@@ -69,20 +69,15 @@ jobs:
     - name: Build application
       run: mvn clean package -DskipTests
       
-    - name: Create Windows distribution
+    - name: Create Windows installer
       run: |
-        mkdir -p dist
-        cp target/scanner-desktop-client.jar dist/
-        cp lib/jacob-1.21-x64.dll dist/
-        cp lib/jacob.jar dist/
-        echo "Pascal Scanning Tool v1.0.0" > dist/README.txt
-        echo "Run: java -jar scanner-desktop-client.jar" >> dist/README.txt
+        packaging/windows/package.bat
         
-    - name: Upload Windows distribution
+    - name: Upload Windows installer
       uses: actions/upload-artifact@v4
       with:
         name: pascal-scanning-tool-windows
-        path: dist/
+        path: dist/Pascal-Scanning-Tool-*.exe
 
   build-macos:
     name: Build macOS Installer
@@ -109,18 +104,16 @@ jobs:
     - name: Build application
       run: mvn clean package -DskipTests
       
-    - name: Create macOS distribution
+    - name: Create macOS installer
       run: |
-        mkdir -p dist
-        cp target/scanner-desktop-client.jar dist/
-        echo "Pascal Scanning Tool v1.0.0" > dist/README.txt
-        echo "Run: java -jar scanner-desktop-client.jar" >> dist/README.txt
+        chmod +x packaging/macos/package.sh
+        packaging/macos/package.sh
         
-    - name: Upload macOS distribution
+    - name: Upload macOS installer
       uses: actions/upload-artifact@v4
       with:
         name: pascal-scanning-tool-macos
-        path: dist/
+        path: dist/Pascal-Scanning-Tool-*.pkg
 
   build-linux:
     name: Build Linux Installer
@@ -147,18 +140,16 @@ jobs:
     - name: Build application
       run: mvn clean package -DskipTests
       
-    - name: Create Linux distribution
+    - name: Create Linux installer
       run: |
-        mkdir -p dist
-        cp target/scanner-desktop-client.jar dist/
-        echo "Pascal Scanning Tool v1.0.0" > dist/README.txt
-        echo "Run: java -jar scanner-desktop-client.jar" >> dist/README.txt
+        chmod +x packaging/linux/package.sh
+        packaging/linux/package.sh
         
-    - name: Upload Linux distribution
+    - name: Upload Linux installer
       uses: actions/upload-artifact@v4
       with:
         name: pascal-scanning-tool-linux
-        path: dist/
+        path: dist/Pascal-Scanning-Tool-*.deb
 
   release:
     name: Create Release
@@ -173,9 +164,9 @@ jobs:
     - name: Create release archive
       run: |
         mkdir -p release
-        cp -r pascal-scanning-tool-windows/* release/windows/
-        cp -r pascal-scanning-tool-macos/* release/macos/
-        cp -r pascal-scanning-tool-linux/* release/linux/
+        cp pascal-scanning-tool-windows/* release/
+        cp pascal-scanning-tool-macos/* release/
+        cp pascal-scanning-tool-linux/* release/
         
     - name: Upload release assets
       uses: actions/upload-release-asset@v1
@@ -184,5 +175,5 @@ jobs:
       with:
         upload_url: ${{ github.event.release.upload_url }}
         asset_path: ./release/
-        asset_name: pascal-scanning-tool-${{ github.event.release.tag_name }}-distributions
+        asset_name: pascal-scanning-tool-${{ github.event.release.tag_name }}
         asset_content_type: application/zip
