@@ -39,20 +39,27 @@ Pascal Scanning Tool is a modern, enterprise-ready desktop application that prov
 
 ### **Download & Install**
 
-| Platform | Download | Size |
-|----------|----------|------|
-| **Windows** | [pascal-scanning-tool-windows.zip](releases/windows/pascal-scanning-tool-windows.zip) | ~15MB |
-| **macOS** | [pascal-scanning-tool-macos.zip](releases/macos/pascal-scanning-tool-macos.zip) | ~15MB |
-| **Linux** | [pascal-scanning-tool-linux.zip](releases/linux/pascal-scanning-tool-linux.zip) | ~15MB |
+| Platform | Download | Size | Instructions |
+|----------|----------|------|-------------|
+| **Windows** | [Download JAR Distribution](https://github.com/pascagihozo/pascal-scanning-tool/actions) | ~15MB | Extract ZIP → Run `packaging/windows/package.bat` |
+| **macOS** | [Download JAR Distribution](https://github.com/pascagihozo/pascal-scanning-tool/actions) | ~15MB | Extract ZIP → Run `packaging/macos/package.sh` |
+| **Linux** | [Download JAR Distribution](https://github.com/pascagihozo/pascal-scanning-tool/actions) | ~15MB | Extract ZIP → Run `packaging/linux/package.sh` |
 
-### **Native Installers** 
-> **💡 Want a native installer?** Download the JAR distribution above, then follow the [Local Installer Creation](#creating-native-installers-locally) instructions below to create a native installer for your platform.
+### **How to Get Downloads**
+1. **Go to**: [GitHub Actions](https://github.com/pascagihozo/pascal-scanning-tool/actions)
+2. **Click**: Latest successful workflow run (green checkmark)
+3. **Download**: Artifacts from the "Artifacts" section
+4. **Extract**: ZIP file to your local directory
+5. **Create Installer**: Run the packaging script for your platform
 
-**Why JAR + Local Installer Creation?**
-- ✅ **Reliable CI/CD**: JAR distributions always build successfully
-- ✅ **Native Installers**: Create optimized installers for your specific system
-- ✅ **Platform-Specific**: Get the best features for Windows/macOS/Linux
-- ✅ **No Dependencies**: JAR runs anywhere Java is installed
+### **JAR vs Native Installers**
+
+| Type | What You Get | How to Use | Best For |
+|------|-------------|------------|----------|
+| **JAR Distribution** | Ready-to-run JAR + libraries | `java -jar scanner-desktop-client.jar` | Quick testing, development |
+| **Native Installer** | Platform-specific installer (.exe/.pkg/.deb) | Run packaging script → Install normally | End users, production |
+
+> **💡 Recommendation**: Download JAR distribution and create native installer for the best user experience!
 
 ### **System Requirements**
 
