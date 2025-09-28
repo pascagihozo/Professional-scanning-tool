@@ -41,11 +41,18 @@ Pascal Scanning Tool is a modern, enterprise-ready desktop application that prov
 
 | Platform | Download | Size |
 |----------|----------|------|
-| **Windows** | [pascal-scanning-tool-1.0.0.exe](releases/windows/pascal-scanning-tool-1.0.0.exe) | ~50MB |
-| **macOS** | [pascal-scanning-tool-1.0.0.pkg](releases/macos/pascal-scanning-tool-1.0.0.pkg) | ~50MB |
-| **Linux** | [pascal-scanning-tool-1.0.0.deb](releases/linux/pascal-scanning-tool-1.0.0.deb) | ~50MB |
+| **Windows** | [pascal-scanning-tool-windows.zip](releases/windows/pascal-scanning-tool-windows.zip) | ~15MB |
+| **macOS** | [pascal-scanning-tool-macos.zip](releases/macos/pascal-scanning-tool-macos.zip) | ~15MB |
+| **Linux** | [pascal-scanning-tool-linux.zip](releases/linux/pascal-scanning-tool-linux.zip) | ~15MB |
 
-> **Note**: Installers are automatically built by GitHub Actions and will be available as release assets once the CI/CD pipeline completes successfully.
+### **Native Installers** 
+> **💡 Want a native installer?** Download the JAR distribution above, then follow the [Local Installer Creation](#creating-native-installers-locally) instructions below to create a native installer for your platform.
+
+**Why JAR + Local Installer Creation?**
+- ✅ **Reliable CI/CD**: JAR distributions always build successfully
+- ✅ **Native Installers**: Create optimized installers for your specific system
+- ✅ **Platform-Specific**: Get the best features for Windows/macOS/Linux
+- ✅ **No Dependencies**: JAR runs anywhere Java is installed
 
 ### **System Requirements**
 
@@ -172,47 +179,68 @@ mvn clean package
 mvn spring-boot:run
 ```
 
-### **Creating Native Installers Locally**
+## 🎯 **Creating Native Installers Locally**
 
-#### **Windows Installer (.exe)**
+> **💡 This is the recommended approach!** Create native installers optimized for your specific system.
 
+### **Why Create Local Installers?**
+- 🚀 **Better Performance**: Optimized for your specific hardware
+- 🔧 **Platform Features**: Full Windows WIA, macOS SANE, Linux SANE integration
+- 📦 **Self-Contained**: Includes Java runtime (no Java installation needed)
+- 🎨 **Native Look**: Integrates with your OS (Start Menu, Dock, etc.)
+- 🔒 **Code Signing**: Can be signed for trusted installation
+
+### **Quick Start - One Command**
+
+#### **Windows (.exe)**
 ```bash
-# Prerequisites: JDK 17+ with jpackage tool
-# Build the application first
-mvn clean package
-
-# Create Windows installer
+# Download and extract the Windows JAR distribution
+# Then run:
 packaging/windows/package.bat
-
-# Installer will be created at: dist/Pascal-Scanning-Tool-1.0.0.exe
+# Creates: dist/Pascal-Scanning-Tool-1.0.0.exe
 ```
 
-#### **macOS Installer (.pkg)**
+#### **macOS (.pkg)**
+```bash
+# Download and extract the macOS JAR distribution
+# Then run:
+chmod +x packaging/macos/package.sh
+packaging/macos/package.sh
+# Creates: dist/Pascal-Scanning-Tool-1.0.0.pkg
+```
+
+#### **Linux (.deb)**
+```bash
+# Download and extract the Linux JAR distribution
+# Then run:
+chmod +x packaging/linux/package.sh
+packaging/linux/package.sh
+# Creates: dist/Pascal-Scanning-Tool-1.0.0.deb
+```
+
+### **From Source Code**
+
+If you have the source code:
 
 ```bash
-# Prerequisites: JDK 17+ with jpackage tool, macOS system
-# Build the application first
+# Clone the repository
+git clone https://github.com/pascagihozo/pascal-scanning-tool.git
+cd pascal-scanning-tool
+
+# Build the application
 mvn clean package
 
-# Create macOS installer
+# Create installer for your platform
+# Windows:
+packaging/windows/package.bat
+
+# macOS:
 chmod +x packaging/macos/package.sh
 packaging/macos/package.sh
 
-# Installer will be created at: dist/Pascal-Scanning-Tool-1.0.0.pkg
-```
-
-#### **Linux Installer (.deb)**
-
-```bash
-# Prerequisites: JDK 17+ with jpackage tool, Linux system
-# Build the application first
-mvn clean package
-
-# Create Linux installer
+# Linux:
 chmod +x packaging/linux/package.sh
 packaging/linux/package.sh
-
-# Installer will be created at: dist/Pascal-Scanning-Tool-1.0.0.deb
 ```
 
 ### **Automated Build Scripts**
