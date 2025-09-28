@@ -69,29 +69,52 @@ jobs:
     - name: Build application
       run: mvn clean package -DskipTests
       
+    - name: Debug - List files
+      run: |
+        echo "=== Current directory contents ==="
+        dir
+        echo "=== Target directory contents ==="
+        if exist target dir target
+        echo "=== Lib directory contents ==="
+        if exist lib dir lib
+      
     - name: Create Windows distribution
       run: |
+        echo "=== Creating Windows distribution ==="
         if not exist dist mkdir dist
+        echo "=== Checking for JAR file ==="
         if exist target\scanner-desktop-client.jar (
+          echo "JAR file found, copying..."
           copy target\scanner-desktop-client.jar dist\
+          echo "JAR file copied successfully"
         ) else (
-          echo ERROR: scanner-desktop-client.jar not found in target directory
+          echo "ERROR: scanner-desktop-client.jar not found in target directory"
+          echo "Target directory contents:"
+          if exist target dir target
           exit 1
         )
+        echo "=== Checking for JACOB libraries ==="
         if exist lib\jacob-1.21-x64.dll (
+          echo "JACOB DLL found, copying..."
           copy lib\jacob-1.21-x64.dll dist\
         ) else (
-          echo WARNING: jacob-1.21-x64.dll not found in lib directory
+          echo "WARNING: jacob-1.21-x64.dll not found in lib directory"
+          echo "Lib directory contents:"
+          if exist lib dir lib
         )
         if exist lib\jacob.jar (
+          echo "JACOB JAR found, copying..."
           copy lib\jacob.jar dist\
         ) else (
-          echo WARNING: jacob.jar not found in lib directory
+          echo "WARNING: jacob.jar not found in lib directory"
         )
+        echo "=== Creating README ==="
         echo Pascal Scanning Tool v1.0.0 > dist\README.txt
         echo Run: java -jar scanner-desktop-client.jar >> dist\README.txt
         echo. >> dist\README.txt
         echo To create a native installer, run: packaging\windows\package.bat >> dist\README.txt
+        echo "=== Distribution created successfully ==="
+        dir dist
         
     - name: Upload Windows distribution
       uses: actions/upload-artifact@v4
