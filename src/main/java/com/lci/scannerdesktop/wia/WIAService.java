@@ -169,12 +169,42 @@ public class WIAService {
 
             com.jacob.com.Dispatch device = com.jacob.com.Dispatch.call(target, "Connect").toDispatch();
             com.jacob.com.Dispatch items = com.jacob.com.Dispatch.get(device, "Items").toDispatch();
-            com.jacob.com.Dispatch item = com.jacob.com.Dispatch.call(items, "Item", 1).toDispatch();
+            int itemCount = com.jacob.com.Dispatch.get(items, "Count").getInt();
+            log.debug("WIA: Device has {} item(s)", itemCount);
+            
+            // Try to find the best item (prefer flatbed scanner, item 1 is usually flatbed)
+            com.jacob.com.Dispatch item = null;
+            if (itemCount > 0) {
+                item = com.jacob.com.Dispatch.call(items, "Item", 1).toDispatch();
+                try {
+                    String itemName = com.jacob.com.Dispatch.get(item, "ItemType").toString();
+                    log.debug("WIA: Using item 1, type: {}", itemName);
+                } catch (Throwable ignore) {}
+            }
+            
+            if (item == null) {
+                r.status = "ERROR";
+                r.message = "Scanner has no available items";
+                return r;
+            }
 
-            // Apply basic properties
-            setItemInt(item, 6147, mapColor(options.colorMode)); // Current Intent (approx)
-            setItemInt(item, 6146, options.dpi != null ? options.dpi : 300); // Horizontal Resolution
-            setItemInt(item, 6148, options.dpi != null ? options.dpi : 300); // Vertical Resolution
+            // Apply basic properties with error handling
+            log.debug("WIA: Setting scan properties - DPI: {}, Color: {}", 
+                options.dpi != null ? options.dpi : 300, options.colorMode);
+            
+            try {
+                setItemInt(item, 6147, mapColor(options.colorMode)); // Current Intent
+            } catch (Throwable e) {
+                log.debug("WIA: Could not set color mode: {}", e.getMessage());
+            }
+            
+            try {
+                int dpi = options.dpi != null ? options.dpi : 300;
+                setItemInt(item, 6146, dpi); // Horizontal Resolution
+                setItemInt(item, 6148, dpi); // Vertical Resolution
+            } catch (Throwable e) {
+                log.debug("WIA: Could not set DPI: {}", e.getMessage());
+            }
 
             // TODO: If ADF requested, set feeder and handle multi-page loop
             if (Boolean.TRUE.equals(options.adf)) {
@@ -183,36 +213,141 @@ public class WIAService {
             }
 
             // Acquire image (still image transfer)
-            com.jacob.com.Dispatch imageFile = com.jacob.com.Dispatch.call(item, "Transfer", formatGuid(options.format)).toDispatch();
-
-            byte[] data = null;
+            // Try with format GUID first, fallback to default if that fails
+            com.jacob.com.Variant transferResult = null;
+            com.jacob.com.Dispatch imageFile = null;
+            
             try {
-                // Some drivers return an ImageFile with no FileName; prefer FileData if available
+                log.debug("WIA: Attempting Transfer with format GUID: {}", formatGuid(options.format));
+                transferResult = com.jacob.com.Dispatch.call(item, "Transfer", formatGuid(options.format));
+                if (transferResult != null && !transferResult.isNull()) {
+                    imageFile = transferResult.toDispatch();
+                    log.debug("WIA: Transfer successful with format GUID");
+                }
+            } catch (Throwable e) {
+                log.warn("WIA: Transfer with format GUID failed: {}, trying default transfer", e.getMessage());
+            }
+            
+            // Fallback: Try transfer without format parameter (use driver default)
+            if (imageFile == null) {
+                try {
+                    log.debug("WIA: Attempting default Transfer (no format parameter)");
+                    transferResult = com.jacob.com.Dispatch.call(item, "Transfer");
+                    if (transferResult != null && !transferResult.isNull()) {
+                        imageFile = transferResult.toDispatch();
+                        log.info("WIA: Transfer successful with default format (Kyocera-compatible mode)");
+                    }
+                } catch (Throwable e) {
+                    log.error("WIA: Default transfer also failed: {}", e.getMessage());
+                }
+            }
+            
+            if (imageFile == null) {
+                r.status = "ERROR";
+                r.message = "Scanner transfer failed - no image returned from device. " +
+                    "This Kyocera scanner may have limited WIA support. " +
+                    "RECOMMENDED: Use eSCL network scanning instead. " +
+                    "Configure the scanner's IP address in application.properties: escl.manual-ips=<scanner-ip>";
+                log.error("WIA: Transfer failed for both format-specific and default methods. " +
+                    "Kyocera scanners often have better eSCL support than WIA.");
+                return r;
+            }
+            
+            byte[] data = null;
+            
+            // Method 1: Try FileData.BinaryData (works for most HP, Canon, Epson drivers)
+            try {
                 com.jacob.com.Variant fileDataVar = com.jacob.com.Dispatch.get(imageFile, "FileData");
                 if (fileDataVar != null && !fileDataVar.isNull()) {
                     com.jacob.com.Dispatch fileDataDisp = fileDataVar.toDispatch();
-                    com.jacob.com.Variant binVar = com.jacob.com.Dispatch.get(fileDataDisp, "BinaryData");
-                    if (binVar != null) {
-                        try {
-                            com.jacob.com.SafeArray sa = binVar.toSafeArray();
-                            data = (byte[]) sa.toByteArray();
-                        } catch (Throwable ignore2) {
-                            // Some drivers expose a byte[] directly
-                            try { data = (byte[]) binVar.toJavaObject(); } catch (Throwable ignore3) {}
+                    if (fileDataDisp != null) {
+                        com.jacob.com.Variant binVar = com.jacob.com.Dispatch.get(fileDataDisp, "BinaryData");
+                        if (binVar != null && !binVar.isNull()) {
+                            try {
+                                com.jacob.com.SafeArray sa = binVar.toSafeArray();
+                                if (sa != null) {
+                                    data = sa.toByteArray();
+                                    log.debug("WIA: Retrieved {} bytes via FileData.BinaryData", data.length);
+                                }
+                            } catch (Throwable e) {
+                                log.debug("WIA: SafeArray conversion failed, trying direct cast: {}", e.getMessage());
+                                try { 
+                                    Object obj = binVar.toJavaObject();
+                                    if (obj instanceof byte[]) {
+                                        data = (byte[]) obj;
+                                        log.debug("WIA: Retrieved {} bytes via direct cast", data.length);
+                                    }
+                                } catch (Throwable ignore) {}
+                            }
                         }
                     }
                 }
-            } catch (Throwable ignore) {}
+            } catch (Throwable e) {
+                log.debug("WIA: FileData method failed: {}", e.getMessage());
+            }
 
+            // Method 2: Try FileName property (some drivers save to temp automatically)
             if (data == null) {
-                // Fallback: persist to a temp file if FileName is provided by the driver
                 try {
-                    String filePath = com.jacob.com.Dispatch.get(imageFile, "FileName").toString();
-                    java.nio.file.Path path = java.nio.file.Paths.get(filePath);
-                    data = java.nio.file.Files.readAllBytes(path);
-                } catch (Throwable t) {
-                    log.warn("WIA image retrieval failed (FileData/FileName). {}", t.getMessage());
+                    com.jacob.com.Variant fileNameVar = com.jacob.com.Dispatch.get(imageFile, "FileName");
+                    if (fileNameVar != null && !fileNameVar.isNull()) {
+                        String filePath = fileNameVar.toString();
+                        if (filePath != null && !filePath.isEmpty() && !filePath.equals("null")) {
+                            java.nio.file.Path path = java.nio.file.Paths.get(filePath);
+                            if (java.nio.file.Files.exists(path)) {
+                                data = java.nio.file.Files.readAllBytes(path);
+                                log.debug("WIA: Retrieved {} bytes from FileName: {}", data.length, filePath);
+                            }
+                        }
+                    }
+                } catch (Throwable e) {
+                    log.debug("WIA: FileName method failed: {}", e.getMessage());
                 }
+            }
+
+            // Method 3: Force save to temp file (works for Kyocera and other stubborn drivers)
+            if (data == null) {
+                java.io.File tempFile = null;
+                try {
+                    // Use PNG extension for better compatibility
+                    String ext = options.format != null ? options.format.toLowerCase() : "png";
+                    if ("pdf".equals(ext)) ext = "png"; // Can't save directly as PDF
+                    tempFile = java.io.File.createTempFile("wia_scan_", "." + ext);
+                    String tempPath = tempFile.getAbsolutePath();
+                    log.debug("WIA: Attempting SaveFile to: {}", tempPath);
+                    
+                    // Call ImageFile.SaveFile(filename) - this forces the driver to write
+                    com.jacob.com.Variant saveResult = com.jacob.com.Dispatch.call(imageFile, "SaveFile", new com.jacob.com.Variant(tempPath));
+                    
+                    // Wait a moment for file to be written
+                    Thread.sleep(100);
+                    
+                    // Verify file was created and has content
+                    if (tempFile.exists() && tempFile.length() > 0) {
+                        data = java.nio.file.Files.readAllBytes(tempFile.toPath());
+                        log.info("WIA: Successfully retrieved {} bytes via SaveFile method (Kyocera-compatible)", data.length);
+                    } else {
+                        log.warn("WIA: SaveFile completed but file is empty or missing");
+                    }
+                } catch (Throwable e) {
+                    log.warn("WIA: SaveFile method failed: {}", e.getMessage());
+                } finally {
+                    // Clean up temp file
+                    if (tempFile != null && tempFile.exists()) {
+                        try { 
+                            tempFile.delete(); 
+                            log.debug("WIA: Cleaned up temp file");
+                        } catch (Throwable ignore) {}
+                    }
+                }
+            }
+
+            // Final validation
+            if (data == null || data.length == 0) {
+                log.error("WIA: All image retrieval methods failed (FileData, FileName, SaveFile)");
+                r.status = "ERROR";
+                r.message = "Scanner driver did not provide image data. This may be a driver compatibility issue. Try: 1) Update scanner drivers, 2) Use manufacturer's scanning software, or 3) Try eSCL network scanning if available.";
+                return r;
             }
 
             // Convert to PDF if requested
