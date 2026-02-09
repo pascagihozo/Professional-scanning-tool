@@ -210,112 +210,67 @@ public class WIAService {
             }
 
             com.jacob.com.Dispatch items = com.jacob.com.Dispatch.get(device, "Items").toDispatch();
-            com.jacob.com.Dispatch item = com.jacob.com.Dispatch.call(items, "Item", 1).toDispatch();
+            int itemCount = com.jacob.com.Dispatch.get(items, "Count").getInt();
+            log.debug("WIA: Device has {} item(s)", itemCount);
+            
+            // Try to find the best item (prefer flatbed scanner, item 1 is usually flatbed)
+            com.jacob.com.Dispatch item = null;
+            if (itemCount > 0) {
+                item = com.jacob.com.Dispatch.call(items, "Item", 1).toDispatch();
+                try {
+                    String itemName = com.jacob.com.Dispatch.get(item, "ItemType").toString();
+                    log.debug("WIA: Using item 1, type: {}", itemName);
+                } catch (Throwable ignore) {}
+            }
+            
+            if (item == null) {
+                r.status = "ERROR";
+                r.message = "Scanner has no available items";
+                return r;
+            }
 
-            // Apply basic properties to the item (the actual scan settings)
+            // Apply basic properties
             setItemInt(item, 6147, mapColor(options.colorMode)); // Current Intent (approx)
             setItemInt(item, 6146, options.dpi != null ? options.dpi : 300); // Horizontal Resolution
             setItemInt(item, 6148, options.dpi != null ? options.dpi : 300); // Vertical Resolution
 
-            List<byte[]> pageDatas = new ArrayList<>();
-            boolean hasMorePages = true;
-
-            while (hasMorePages) {
-                com.jacob.com.Dispatch imageFile = null;
-                int retries = 3;
-                while (retries > 0) {
-                    try {
-                        // Acquire image (still image transfer)
-                        imageFile = com.jacob.com.Dispatch.call(item, "Transfer", formatGuid(options.format))
-                                .toDispatch();
-                        break;
-                    } catch (com.jacob.com.ComFailException e) {
-                        // 0x8004001F or "Device is busy"
-                        if (e.getMessage().contains("busy") || e.getMessage().contains("0x8004001F")) {
-                            retries--;
-                            log.warn("WIA device busy, retrying... ({} attempts left)", retries);
-                            try {
-                                Thread.sleep(1500);
-                            } catch (InterruptedException ignore) {
-                            }
-                        } else {
-                            throw e;
-                        }
-                    }
-                }
-
-                if (imageFile == null) {
-                    throw new RuntimeException("Failed to acquire image: Device remained busy or error occurred.");
-                }
-
-                byte[] data = null;
-                java.io.File tempFile = null;
-                try {
-                    // Use SaveFile method - it's much more reliable across different WIA drivers
-                    // than FileData property
-                    String ext = options.format == null ? "png" : options.format.toLowerCase();
-                    if ("pdf".equals(ext))
-                        ext = "png";
-                    tempFile = java.io.File.createTempFile("wia_", "." + ext);
-                    String tempPath = tempFile.getAbsolutePath();
-                    if (tempFile.exists())
-                        tempFile.delete(); // WIA needs to create the file itself
-
-                    com.jacob.com.Dispatch.call(imageFile, "SaveFile", tempPath);
-                    java.io.File savedFile = new java.io.File(tempPath);
-                    if (savedFile.exists()) {
-                        data = java.nio.file.Files.readAllBytes(savedFile.toPath());
-                        savedFile.delete();
-                    }
-                } catch (Throwable t1) {
-                    log.warn("WIA SaveFile failed ({}). Trying FileData fallback...", t1.getMessage());
-                    try {
-                        com.jacob.com.Variant fileDataVar = com.jacob.com.Dispatch.get(imageFile, "FileData");
-                        if (fileDataVar != null && !fileDataVar.isNull()) {
-                            com.jacob.com.Dispatch fileDataDisp = fileDataVar.toDispatch();
-                            com.jacob.com.Variant binVar = com.jacob.com.Dispatch.get(fileDataDisp, "BinaryData");
-                            if (binVar != null) {
-                                try {
-                                    data = (byte[]) binVar.toSafeArray().toByteArray();
-                                } catch (Throwable e) {
-                                    data = (byte[]) binVar.toJavaObject();
-                                }
-                            }
-                        }
-                    } catch (Throwable t2) {
-                        log.warn("WIA image retrieval failed: {}", t2.getMessage());
-                    }
-                }
-
-                if (data != null) {
-                    pageDatas.add(data);
-                }
-
-                // Check if more pages are in the feeder
-                hasMorePages = false;
-                if (Boolean.TRUE.equals(options.adf)) {
-                    try {
-                        // 3087: WIA_DPS_DOCUMENT_HANDLING_STATUS (1 = paper loaded)
-                        com.jacob.com.Variant status = com.jacob.com.Dispatch.get(device, "Properties")
-                                .toDispatch() != null
-                                        ? new com.jacob.com.Variant(Integer.parseInt(
-                                                safeGetProperty(device, "Properties", "Document Handling Status")))
-                                        : new com.jacob.com.Variant(0);
-                        if ((status.getInt() & 1) != 0) {
-                            hasMorePages = true;
-                        }
-                    } catch (Throwable t) {
-                        // Some drivers might not support status check, try to scan until error handled
-                        // above
-                        log.debug("Could not check feeder status: {}", t.getMessage());
-                    }
-                }
+            // TODO: If ADF requested, set feeder and handle multi-page loop
+            if (Boolean.TRUE.equals(options.adf)) {
+                // Example feeder setup (device- and driver-dependent)
+                // setItemInt(item, /*ADF enable*/ 3088, 1); // placeholder property id
             }
 
-            if (pageDatas.isEmpty()) {
-                r.status = "ERROR";
-                r.message = "Failed to retrieve any image data from WIA device";
-                return r;
+            // Acquire image (still image transfer)
+            com.jacob.com.Dispatch imageFile = com.jacob.com.Dispatch.call(item, "Transfer", formatGuid(options.format)).toDispatch();
+
+            byte[] data = null;
+            try {
+                // Some drivers return an ImageFile with no FileName; prefer FileData if available
+                com.jacob.com.Variant fileDataVar = com.jacob.com.Dispatch.get(imageFile, "FileData");
+                if (fileDataVar != null && !fileDataVar.isNull()) {
+                    com.jacob.com.Dispatch fileDataDisp = fileDataVar.toDispatch();
+                    com.jacob.com.Variant binVar = com.jacob.com.Dispatch.get(fileDataDisp, "BinaryData");
+                    if (binVar != null) {
+                        try {
+                            com.jacob.com.SafeArray sa = binVar.toSafeArray();
+                            data = (byte[]) sa.toByteArray();
+                        } catch (Throwable ignore2) {
+                            // Some drivers expose a byte[] directly
+                            try { data = (byte[]) binVar.toJavaObject(); } catch (Throwable ignore3) {}
+                        }
+                    }
+                }
+            } catch (Throwable ignore) {}
+
+            if (data == null) {
+                // Fallback: persist to a temp file if FileName is provided by the driver
+                try {
+                    String filePath = com.jacob.com.Dispatch.get(imageFile, "FileName").toString();
+                    java.nio.file.Path path = java.nio.file.Paths.get(filePath);
+                    data = java.nio.file.Files.readAllBytes(path);
+                } catch (Throwable t) {
+                    log.warn("WIA image retrieval failed (FileData/FileName). {}", t.getMessage());
+                }
             }
 
             // Convert to PDF if requested
