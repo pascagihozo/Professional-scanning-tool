@@ -212,7 +212,7 @@ public class WIAService {
             com.jacob.com.Dispatch items = com.jacob.com.Dispatch.get(device, "Items").toDispatch();
             int itemCount = com.jacob.com.Dispatch.get(items, "Count").getInt();
             log.debug("WIA: Device has {} item(s)", itemCount);
-            
+
             // Try to find the best item (prefer flatbed scanner, item 1 is usually flatbed)
             com.jacob.com.Dispatch item = null;
             if (itemCount > 0) {
@@ -220,9 +220,10 @@ public class WIAService {
                 try {
                     String itemName = com.jacob.com.Dispatch.get(item, "ItemType").toString();
                     log.debug("WIA: Using item 1, type: {}", itemName);
-                } catch (Throwable ignore) {}
+                } catch (Throwable ignore) {
+                }
             }
-            
+
             if (item == null) {
                 r.status = "ERROR";
                 r.message = "Scanner has no available items";
@@ -240,12 +241,15 @@ public class WIAService {
                 // setItemInt(item, /*ADF enable*/ 3088, 1); // placeholder property id
             }
 
+            List<byte[]> pageDatas = new ArrayList<>();
             // Acquire image (still image transfer)
-            com.jacob.com.Dispatch imageFile = com.jacob.com.Dispatch.call(item, "Transfer", formatGuid(options.format)).toDispatch();
+            com.jacob.com.Dispatch imageFile = com.jacob.com.Dispatch.call(item, "Transfer", formatGuid(options.format))
+                    .toDispatch();
 
             byte[] data = null;
             try {
-                // Some drivers return an ImageFile with no FileName; prefer FileData if available
+                // Some drivers return an ImageFile with no FileName; prefer FileData if
+                // available
                 com.jacob.com.Variant fileDataVar = com.jacob.com.Dispatch.get(imageFile, "FileData");
                 if (fileDataVar != null && !fileDataVar.isNull()) {
                     com.jacob.com.Dispatch fileDataDisp = fileDataVar.toDispatch();
@@ -256,11 +260,15 @@ public class WIAService {
                             data = (byte[]) sa.toByteArray();
                         } catch (Throwable ignore2) {
                             // Some drivers expose a byte[] directly
-                            try { data = (byte[]) binVar.toJavaObject(); } catch (Throwable ignore3) {}
+                            try {
+                                data = (byte[]) binVar.toJavaObject();
+                            } catch (Throwable ignore3) {
+                            }
                         }
                     }
                 }
-            } catch (Throwable ignore) {}
+            } catch (Throwable ignore) {
+            }
 
             if (data == null) {
                 // Fallback: persist to a temp file if FileName is provided by the driver
@@ -271,6 +279,16 @@ public class WIAService {
                 } catch (Throwable t) {
                     log.warn("WIA image retrieval failed (FileData/FileName). {}", t.getMessage());
                 }
+            }
+
+            if (data != null) {
+                pageDatas.add(data);
+            }
+
+            if (pageDatas.isEmpty()) {
+                r.status = "ERROR";
+                r.message = "Failed to retrieve any image data from WIA device";
+                return r;
             }
 
             // Convert to PDF if requested
