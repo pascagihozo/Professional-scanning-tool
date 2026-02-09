@@ -1,72 +1,119 @@
 @echo off
-REM Pascal Scanning Client - Windows Installer Build Script
-REM Author: Pascal Gihozo
-REM Description: Creates Windows EXE installer using jpackage
+setlocal enabledelayedexpansion
+REM Pascal Scanning Client - Windows Standalone Packaging Script (Final Robust Version)
 
+echo.
 echo ========================================
 echo   Pascal Scanning Client - Windows
-echo   Professional Document Scanning Solution
+echo   Standalone Application Bundler
 echo ========================================
 echo.
 
-REM Check if Java 17+ is available
-java -version 2>&1 | findstr "version" | findstr "17\|18\|19\|20\|21" >nul
-if %errorlevel% neq 0 (
-    echo ERROR: Java 17 or higher is required for jpackage
-    echo Please install JDK 17+ and try again
-    pause
-    exit /b 1
-)
+REM Set root
+set "SCRIPT_DIR=%~dp0"
+cd /d "%SCRIPT_DIR%..\.."
+set "PROJECT_ROOT=%cd%"
+echo Project Root: %PROJECT_ROOT%
 
-REM Check if Maven is available
-mvn -version >nul 2>&1
-if %errorlevel% neq 0 (
-    echo ERROR: Maven is required for building
-    echo Please install Maven and try again
-    pause
-    exit /b 1
-)
+REM Clear problematic env var
+set "_JAVA_OPTIONS="
 
-echo Creating Windows installer...
+REM 1. Clean and Build
 echo.
+echo [1/4] Building JAR...
+call mvn clean package -DskipTests
+if !errorlevel! neq 0 (
+    echo ERROR: Maven build failed.
+    pause
+    exit /b 1
+)
 
-REM Create dist directory if it doesn't exist
-if not exist dist mkdir dist
+REM 2. Create Minimal Custom Runtime
+echo.
+echo [2/4] Creating Minimal Runtime...
+if exist "target\runtime" rmdir /s /q "target\runtime"
 
-REM Create installer using jpackage
+jlink ^
+    --add-modules java.base,java.desktop,java.logging,java.management,java.naming,java.net.http,java.prefs,java.rmi,java.scripting,java.sql,java.xml,jdk.crypto.ec,jdk.jfr,jdk.unsupported,jdk.httpserver,jdk.charsets,jdk.localedata,jdk.crypto.mscapi,java.security.jgss,java.instrument,java.security.sasl ^
+    --output "target\runtime" ^
+    --strip-debug ^
+    --no-man-pages ^
+    --no-header-files ^
+    --compress=2
+
+if !errorlevel! neq 0 (
+    echo ERROR: jlink failed.
+    pause
+    exit /b 1
+)
+
+REM Inject system DLLs to prevent Side-by-Side errors
+echo Injecting runtime dependencies...
+if not "%JAVA_HOME%"=="" (
+    copy "%JAVA_HOME%\bin\msvcp140.dll" "target\runtime\bin\" >nul 2>&1
+    copy "%JAVA_HOME%\bin\vcruntime140.dll" "target\runtime\bin\" >nul 2>&1
+    copy "%JAVA_HOME%\bin\vcruntime140_1.dll" "target\runtime\bin\" >nul 2>&1
+)
+
+REM 3. Prepare Input
+echo.
+echo [3/4] Preparing bundle input...
+if exist "target\bundle-input" rmdir /s /q "target\bundle-input"
+mkdir "target\bundle-input"
+copy "target\scanner-desktop-client.jar" "target\bundle-input\"
+if exist "lib" (
+    mkdir "target\bundle-input\lib"
+    xcopy /S /Y "lib" "target\bundle-input\lib\"
+)
+
+REM 4. Run jpackage
+echo.
+echo [4/4] Running jpackage...
+if exist "dist" rmdir /s /q "dist"
+mkdir "dist"
+if exist "target\temp-jpackage" rmdir /s /q "target\temp-jpackage"
+mkdir "target\temp-jpackage"
+
+set "ICON_OPT="
+if exist "%SCRIPT_DIR%pascal.ico" (
+    set "ICON_OPT=--icon "%SCRIPT_DIR%pascal.ico""
+)
+
 jpackage ^
-    --input target ^
+    --temp "target\temp-jpackage" ^
+    --runtime-image "target\runtime" ^
+    --input "target\bundle-input" ^
     --main-jar scanner-desktop-client.jar ^
     --main-class com.lci.scannerdesktop.ScannerDesktopApplication ^
     --name "Pascal Scanning Tool" ^
-    --app-version 1.0.0 ^
     --vendor "Pascal Gihozo" ^
-    --description "Professional Document Scanning Solution" ^
-    --copyright "Copyright (c) 2025 Pascal Gihozo" ^
-    --license-file ../LICENSE ^
-    --type exe ^
-    --dest dist ^
-    --icon pascal.ico ^
+    --app-version 1.0.0 ^
+    --dest "dist" ^
+    %ICON_OPT% ^
+    --type app-image ^
     --win-console ^
-    --win-shortcut ^
-    --win-menu ^
-    --win-menu-group "Pascal Scanning Tool" ^
-    --win-dir-chooser ^
-    --win-per-user-install
+    --java-options "-Dfile.encoding=UTF-8 -Xmx512m"
 
-if %errorlevel% neq 0 (
-    echo ERROR: jpackage failed to create installer
+if !errorlevel! neq 0 (
+    echo ERROR: jpackage failed.
     pause
     exit /b 1
 )
 
+REM Create a bulletproof fallback launcher
+echo Creating fallback launcher...
+set "LAUNCHER=dist\Pascal Scanning Tool\Run-Direct.bat"
+echo @echo off > "%LAUNCHER%"
+echo cd /d "%%~dp0" >> "%LAUNCHER%"
+echo echo Starting Pascal Scanning Client... >> "%LAUNCHER%"
+echo "runtime\bin\java.exe" -jar "app\scanner-desktop-client.jar" >> "%LAUNCHER%"
+echo if %%errorlevel%% neq 0 pause >> "%LAUNCHER%"
+
 echo.
 echo ========================================
-echo   Build completed successfully!
+echo   BUILD COMPLETE
+echo   1. Try running "Pascal Scanning Tool.exe"
+echo   2. If it fails, try "Run-Direct.bat"
 echo ========================================
-echo.
-echo Installer created: dist/Pascal Scanning Tool-1.0.0.exe
-echo.
-echo You can now distribute this installer to users.
 echo.
 pause

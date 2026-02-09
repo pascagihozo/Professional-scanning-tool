@@ -12,6 +12,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableScheduling
 public class ScannerDesktopApplication {
     public static void main(String[] args) {
+
         System.out.println("================================================================");
         System.out.println("                    Pascal Scanning Client                      ");
         System.out.println("              Professional Document Scanning Solution            ");
@@ -22,9 +23,7 @@ public class ScannerDesktopApplication {
         System.out.println("Web UI: http://127.0.0.1:17070/ui");
         System.out.println("API: http://127.0.0.1:17070/v1");
         System.out.println();
-        
+
         SpringApplication.run(ScannerDesktopApplication.class, args);
     }
 }
-
-
