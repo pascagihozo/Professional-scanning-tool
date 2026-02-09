@@ -200,27 +200,57 @@ public class WIAService {
             }
 
             // Set Document Handling (Feeder vs Flatbed)
-            // 3088: WIA_DPS_DOCUMENT_HANDLING_SELECT (1=Feeder, 2=Flatbed)
-            int handling = (Boolean.TRUE.equals(options.adf)) ? 1 : 2;
+            // 3088: WIA_DPS_DOCUMENT_HANDLING_SELECT
+            // Flags: 1=FEEDER, 2=FLATBED, 4=DUPLEX, 32=FRONT_AND_BACK
+            int handling = 2; // Default Flatbed
+            if (Boolean.TRUE.equals(options.adf)) {
+                handling = 1; // Feeder
+                if (Boolean.TRUE.equals(options.duplex)) {
+                    handling |= 4; // Add Duplex flag
+                    handling |= 32; // Add FRONT_AND_BACK (very important for some drivers)
+                    log.debug("WIA: Duplex scanning enabled (flags: {})", handling);
+                }
+            }
             setItemInt(device, 3088, handling);
 
             // 3096: WIA_DPS_PAGES (0 = all pages from feeder)
             if (Boolean.TRUE.equals(options.adf)) {
                 setItemInt(device, 3096, 0);
+            } else {
+                setItemInt(device, 3096, 1); // Only 1 page for non-ADF/single scan
+                log.debug("WIA: Single page scan requested (WIA_DPS_PAGES=1)");
             }
 
             com.jacob.com.Dispatch items = com.jacob.com.Dispatch.get(device, "Items").toDispatch();
             int itemCount = com.jacob.com.Dispatch.get(items, "Count").getInt();
             log.debug("WIA: Device has {} item(s)", itemCount);
 
-            // Try to find the best item (prefer flatbed scanner, item 1 is usually flatbed)
+            // Search for the best scanning item
             com.jacob.com.Dispatch item = null;
             if (itemCount > 0) {
-                item = com.jacob.com.Dispatch.call(items, "Item", 1).toDispatch();
-                try {
-                    String itemName = com.jacob.com.Dispatch.get(item, "ItemType").toString();
-                    log.debug("WIA: Using item 1, type: {}", itemName);
-                } catch (Throwable ignore) {
+                // If ADF is requested, try to find the item with Feeder category
+                if (Boolean.TRUE.equals(options.adf)) {
+                    for (int i = 1; i <= itemCount; i++) {
+                        com.jacob.com.Dispatch candidate = com.jacob.com.Dispatch.call(items, "Item", i).toDispatch();
+                        try {
+                            // 4098: WIA_IPA_ITEM_CATEGORY (Feeder category is usually
+                            // {FE142255-C455-4749-A059-E63E971EBD9E})
+                            String category = safeGetProperty(candidate, "Properties", "Item Category");
+                            if (category != null && category.toUpperCase().contains("FE142255")) {
+                                item = candidate;
+                                log.debug("WIA: Found explicit Feeder item at index {}", i);
+                                break;
+                            }
+                        } catch (Throwable t) {
+                            log.debug("WIA: Error checking item {} category: {}", i, t.getMessage());
+                        }
+                    }
+                }
+
+                // Fallback to first item if no specific feeder item found
+                if (item == null) {
+                    item = com.jacob.com.Dispatch.call(items, "Item", 1).toDispatch();
+                    log.debug("WIA: Using default Item 1");
                 }
             }
 
@@ -236,29 +266,25 @@ public class WIAService {
             setItemInt(item, 6148, options.dpi != null ? options.dpi : 300); // Vertical Resolution
 
             List<byte[]> pageDatas = new ArrayList<>();
-            boolean hasMorePages = true;
+            log.info("WIA Scan: adf={}, duplex={}, color={}, dpi={}, format={}",
+                    options.adf, options.duplex, options.colorMode, options.dpi, options.format);
 
-            while (hasMorePages) {
+            while (true) {
                 com.jacob.com.Dispatch imageFile = null;
                 int retries = 3;
                 while (retries > 0) {
                     try {
-                        // Acquire image (still image transfer)
                         imageFile = com.jacob.com.Dispatch.call(item, "Transfer", formatGuid(options.format))
                                 .toDispatch();
                         break;
                     } catch (com.jacob.com.ComFailException e) {
-                        // 0x80210003: WIA_ERROR_PAPER_EMPTY
-                        // 0x8004001F: OLE_E_BLANK
                         String msg = e.getMessage().toLowerCase();
                         if (msg.contains("no documents left") || msg.contains("0x80210003")
                                 || msg.contains("paper empty")) {
-                            log.debug("WIA: Feeder empty (graceful finish)");
-                            hasMorePages = false;
+                            log.debug("WIA: Loop terminated - no more pages available");
                             break;
                         }
 
-                        // 0x8004001F or "Device is busy"
                         if (msg.contains("busy") || msg.contains("0x8004001f")) {
                             retries--;
                             log.warn("WIA device busy, retrying... ({} attempts left)", retries);
@@ -273,15 +299,11 @@ public class WIAService {
                 }
 
                 if (imageFile == null) {
-                    if (!hasMorePages)
-                        break; // Feeder became empty during retry loop
-                    throw new RuntimeException("Failed to acquire image: Device remained busy or error occurred.");
+                    break;
                 }
 
                 byte[] data = null;
                 try {
-                    // Some drivers return an ImageFile with no FileName; prefer FileData if
-                    // available
                     com.jacob.com.Variant fileDataVar = com.jacob.com.Dispatch.get(imageFile, "FileData");
                     if (fileDataVar != null && !fileDataVar.isNull()) {
                         com.jacob.com.Dispatch fileDataDisp = fileDataVar.toDispatch();
@@ -291,7 +313,6 @@ public class WIAService {
                                 com.jacob.com.SafeArray sa = binVar.toSafeArray();
                                 data = (byte[]) sa.toByteArray();
                             } catch (Throwable ignore2) {
-                                // Some drivers expose a byte[] directly
                                 try {
                                     data = (byte[]) binVar.toJavaObject();
                                 } catch (Throwable ignore3) {
@@ -303,7 +324,6 @@ public class WIAService {
                 }
 
                 if (data == null) {
-                    // Fallback: persist to a temp file if FileName is provided by the driver
                     try {
                         String filePath = com.jacob.com.Dispatch.get(imageFile, "FileName").toString();
                         java.nio.file.Path path = java.nio.file.Paths.get(filePath);
@@ -315,26 +335,15 @@ public class WIAService {
 
                 if (data != null) {
                     pageDatas.add(data);
+                    log.info("WIA: Captured page {}, total size: {} bytes", pageDatas.size(), data.length);
                 }
 
-                // Check if more pages are in the feeder
-                hasMorePages = false;
-                if (Boolean.TRUE.equals(options.adf)) {
-                    try {
-                        // 3087: WIA_DPS_DOCUMENT_HANDLING_STATUS (1 = paper loaded)
-                        String statusStr = safeGetProperty(device, "Properties", "Document Handling Status");
-                        if (statusStr != null) {
-                            int status = Integer.parseInt(statusStr);
-                            if ((status & 1) != 0) {
-                                hasMorePages = true;
-                                log.debug("WIA: More pages detected in ADF");
-                            }
-                        }
-                    } catch (Throwable t) {
-                        log.debug("Could not check feeder status: {}", t.getMessage());
-                    }
+                if (!Boolean.TRUE.equals(options.adf)) {
+                    break;
                 }
             }
+
+            log.info("WIA Scan: Completed, captured {} total page(s)", pageDatas.size());
 
             if (pageDatas.isEmpty()) {
                 r.status = "ERROR";
