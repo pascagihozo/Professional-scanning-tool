@@ -235,54 +235,105 @@ public class WIAService {
             setItemInt(item, 6146, options.dpi != null ? options.dpi : 300); // Horizontal Resolution
             setItemInt(item, 6148, options.dpi != null ? options.dpi : 300); // Vertical Resolution
 
-            // TODO: If ADF requested, set feeder and handle multi-page loop
-            if (Boolean.TRUE.equals(options.adf)) {
-                // Example feeder setup (device- and driver-dependent)
-                // setItemInt(item, /*ADF enable*/ 3088, 1); // placeholder property id
-            }
-
             List<byte[]> pageDatas = new ArrayList<>();
-            // Acquire image (still image transfer)
-            com.jacob.com.Dispatch imageFile = com.jacob.com.Dispatch.call(item, "Transfer", formatGuid(options.format))
-                    .toDispatch();
+            boolean hasMorePages = true;
 
-            byte[] data = null;
-            try {
-                // Some drivers return an ImageFile with no FileName; prefer FileData if
-                // available
-                com.jacob.com.Variant fileDataVar = com.jacob.com.Dispatch.get(imageFile, "FileData");
-                if (fileDataVar != null && !fileDataVar.isNull()) {
-                    com.jacob.com.Dispatch fileDataDisp = fileDataVar.toDispatch();
-                    com.jacob.com.Variant binVar = com.jacob.com.Dispatch.get(fileDataDisp, "BinaryData");
-                    if (binVar != null) {
-                        try {
-                            com.jacob.com.SafeArray sa = binVar.toSafeArray();
-                            data = (byte[]) sa.toByteArray();
-                        } catch (Throwable ignore2) {
-                            // Some drivers expose a byte[] directly
+            while (hasMorePages) {
+                com.jacob.com.Dispatch imageFile = null;
+                int retries = 3;
+                while (retries > 0) {
+                    try {
+                        // Acquire image (still image transfer)
+                        imageFile = com.jacob.com.Dispatch.call(item, "Transfer", formatGuid(options.format))
+                                .toDispatch();
+                        break;
+                    } catch (com.jacob.com.ComFailException e) {
+                        // 0x80210003: WIA_ERROR_PAPER_EMPTY
+                        // 0x8004001F: OLE_E_BLANK
+                        String msg = e.getMessage().toLowerCase();
+                        if (msg.contains("no documents left") || msg.contains("0x80210003")
+                                || msg.contains("paper empty")) {
+                            log.debug("WIA: Feeder empty (graceful finish)");
+                            hasMorePages = false;
+                            break;
+                        }
+
+                        // 0x8004001F or "Device is busy"
+                        if (msg.contains("busy") || msg.contains("0x8004001f")) {
+                            retries--;
+                            log.warn("WIA device busy, retrying... ({} attempts left)", retries);
                             try {
-                                data = (byte[]) binVar.toJavaObject();
-                            } catch (Throwable ignore3) {
+                                Thread.sleep(1500);
+                            } catch (InterruptedException ignore) {
                             }
+                        } else {
+                            throw e;
                         }
                     }
                 }
-            } catch (Throwable ignore) {
-            }
 
-            if (data == null) {
-                // Fallback: persist to a temp file if FileName is provided by the driver
-                try {
-                    String filePath = com.jacob.com.Dispatch.get(imageFile, "FileName").toString();
-                    java.nio.file.Path path = java.nio.file.Paths.get(filePath);
-                    data = java.nio.file.Files.readAllBytes(path);
-                } catch (Throwable t) {
-                    log.warn("WIA image retrieval failed (FileData/FileName). {}", t.getMessage());
+                if (imageFile == null) {
+                    if (!hasMorePages)
+                        break; // Feeder became empty during retry loop
+                    throw new RuntimeException("Failed to acquire image: Device remained busy or error occurred.");
                 }
-            }
 
-            if (data != null) {
-                pageDatas.add(data);
+                byte[] data = null;
+                try {
+                    // Some drivers return an ImageFile with no FileName; prefer FileData if
+                    // available
+                    com.jacob.com.Variant fileDataVar = com.jacob.com.Dispatch.get(imageFile, "FileData");
+                    if (fileDataVar != null && !fileDataVar.isNull()) {
+                        com.jacob.com.Dispatch fileDataDisp = fileDataVar.toDispatch();
+                        com.jacob.com.Variant binVar = com.jacob.com.Dispatch.get(fileDataDisp, "BinaryData");
+                        if (binVar != null) {
+                            try {
+                                com.jacob.com.SafeArray sa = binVar.toSafeArray();
+                                data = (byte[]) sa.toByteArray();
+                            } catch (Throwable ignore2) {
+                                // Some drivers expose a byte[] directly
+                                try {
+                                    data = (byte[]) binVar.toJavaObject();
+                                } catch (Throwable ignore3) {
+                                }
+                            }
+                        }
+                    }
+                } catch (Throwable ignore) {
+                }
+
+                if (data == null) {
+                    // Fallback: persist to a temp file if FileName is provided by the driver
+                    try {
+                        String filePath = com.jacob.com.Dispatch.get(imageFile, "FileName").toString();
+                        java.nio.file.Path path = java.nio.file.Paths.get(filePath);
+                        data = java.nio.file.Files.readAllBytes(path);
+                    } catch (Throwable t) {
+                        log.warn("WIA image retrieval failed (FileData/FileName). {}", t.getMessage());
+                    }
+                }
+
+                if (data != null) {
+                    pageDatas.add(data);
+                }
+
+                // Check if more pages are in the feeder
+                hasMorePages = false;
+                if (Boolean.TRUE.equals(options.adf)) {
+                    try {
+                        // 3087: WIA_DPS_DOCUMENT_HANDLING_STATUS (1 = paper loaded)
+                        String statusStr = safeGetProperty(device, "Properties", "Document Handling Status");
+                        if (statusStr != null) {
+                            int status = Integer.parseInt(statusStr);
+                            if ((status & 1) != 0) {
+                                hasMorePages = true;
+                                log.debug("WIA: More pages detected in ADF");
+                            }
+                        }
+                    } catch (Throwable t) {
+                        log.debug("Could not check feeder status: {}", t.getMessage());
+                    }
+                }
             }
 
             if (pageDatas.isEmpty()) {
@@ -392,7 +443,9 @@ public class WIAService {
         if (allPageBytes == null || allPageBytes.isEmpty())
             return null;
         try (java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream()) {
-            com.itextpdf.text.Document document = new com.itextpdf.text.Document();
+            // Set PageSize to A4 and margins to zero for best fit
+            com.itextpdf.text.Document document = new com.itextpdf.text.Document(com.itextpdf.text.PageSize.A4, 0, 0, 0,
+                    0);
             com.itextpdf.text.pdf.PdfWriter.getInstance(document, baos);
             document.open();
 
@@ -408,13 +461,13 @@ public class WIAService {
                     javax.imageio.ImageIO.write(image, "png", buf);
                     com.itextpdf.text.Image pdfImage = com.itextpdf.text.Image.getInstance(buf.toByteArray());
 
-                    float maxW = document.getPageSize().getWidth() - document.leftMargin() - document.rightMargin();
-                    float maxH = document.getPageSize().getHeight() - document.topMargin() - document.bottomMargin();
-                    pdfImage.scaleToFit(maxW, maxH);
+                    // Scale to fit the A4 page (width and height)
+                    pdfImage.scaleToFit(com.itextpdf.text.PageSize.A4.getWidth(),
+                            com.itextpdf.text.PageSize.A4.getHeight());
                     pdfImage.setAlignment(com.itextpdf.text.Element.ALIGN_CENTER);
 
                     document.add(pdfImage);
-                    document.newPage(); // Add a new page for the next image
+                    document.newPage();
                 }
             }
             document.close();
