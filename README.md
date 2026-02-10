@@ -151,7 +151,7 @@ scanner.cache.ttl-minutes=2
 
 # eSCL Network Scanner Settings
 escl.common.ports=80,443,8080,8443,8181
-escl.manual-ips=127.0.0.1,10.198.195.242
+escl.manual-ips=127.0.0.1
 
 # Windows WIA Backend
 wia.enabled=true
