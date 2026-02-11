@@ -51,16 +51,18 @@ public class WIAService {
 
     public List<ScannerInfo> discoverScanners() {
         List<ScannerInfo> list = new ArrayList<>();
-        if (!isWindows() || !config.isEnabled()) return list;
-        
+        if (!isWindows() || !config.isEnabled())
+            return list;
+
         // Check if JACOB is available
         try {
             Class.forName("com.jacob.com.ComThread");
         } catch (ClassNotFoundException e) {
-            log.warn("JACOB library not available. WIA scanning disabled. Install jacob.jar in lib/ directory to enable Windows WIA support.");
+            log.warn(
+                    "JACOB library not available. WIA scanning disabled. Install jacob.jar in lib/ directory to enable Windows WIA support.");
             return list;
         }
-        
+
         try {
             // Initialize COM (STA) for JACOB interactions
             com.jacob.com.ComThread.InitSTA();
@@ -75,12 +77,15 @@ public class WIAService {
                     com.jacob.com.Dispatch item = com.jacob.com.Dispatch.call(devices, "Item", i).toDispatch();
                     com.jacob.com.Variant tVar = com.jacob.com.Dispatch.get(item, "Type");
                     int type = tVar != null ? tVar.getInt() : -1;
-                    System.out.println("[WIA] DeviceInfo["+i+"] Type="+type);
-                    // WIA device type: 1=Scanner, 2=Camera, 3=Video. Accept 1 as scanner (some drivers use 1).
-                    if (type != 1) continue;
+                    System.out.println("[WIA] DeviceInfo[" + i + "] Type=" + type);
+                    // WIA device type: 1=Scanner, 2=Camera, 3=Video. Accept 1 as scanner (some
+                    // drivers use 1).
+                    if (type != 1)
+                        continue;
                     String id = com.jacob.com.Dispatch.get(item, "DeviceID").toString();
-                    String name = com.jacob.com.Dispatch.get(item, "Properties").toDispatch() != null ?
-                            safeGetProperty(item, "Properties", "Name") : "WIA Scanner";
+                    String name = com.jacob.com.Dispatch.get(item, "Properties").toDispatch() != null
+                            ? safeGetProperty(item, "Properties", "Name")
+                            : "WIA Scanner";
                     ScannerInfo si = new ScannerInfo();
                     si.id = "wia_" + id;
                     si.name = name != null ? name : "WIA Scanner";
@@ -92,7 +97,8 @@ public class WIAService {
             } catch (Throwable primary) {
                 log.warn("WIA.DeviceManager discovery failed ({}). Trying DeviceManager1...", primary.getMessage());
                 try {
-                    com.jacob.activeX.ActiveXComponent wia = new com.jacob.activeX.ActiveXComponent("WIA.DeviceManager1");
+                    com.jacob.activeX.ActiveXComponent wia = new com.jacob.activeX.ActiveXComponent(
+                            "WIA.DeviceManager1");
                     com.jacob.com.Dispatch devices = wia.getPropertyAsComponent("DeviceInfos").getObject();
                     int count = com.jacob.com.Dispatch.get(devices, "Count").getInt();
                     System.out.println("[WIA] DeviceManager1 count=" + count);
@@ -100,11 +106,13 @@ public class WIAService {
                         com.jacob.com.Dispatch item = com.jacob.com.Dispatch.call(devices, "Item", i).toDispatch();
                         com.jacob.com.Variant tVar = com.jacob.com.Dispatch.get(item, "Type");
                         int type = tVar != null ? tVar.getInt() : -1;
-                        System.out.println("[WIA] (DM1) DeviceInfo["+i+"] Type="+type);
-                        if (type != 1) continue;
+                        System.out.println("[WIA] (DM1) DeviceInfo[" + i + "] Type=" + type);
+                        if (type != 1)
+                            continue;
                         String id = com.jacob.com.Dispatch.get(item, "DeviceID").toString();
-                        String name = com.jacob.com.Dispatch.get(item, "Properties").toDispatch() != null ?
-                                safeGetProperty(item, "Properties", "Name") : "WIA Scanner";
+                        String name = com.jacob.com.Dispatch.get(item, "Properties").toDispatch() != null
+                                ? safeGetProperty(item, "Properties", "Name")
+                                : "WIA Scanner";
                         ScannerInfo si = new ScannerInfo();
                         si.id = "wia_" + id;
                         si.name = name != null ? name : "WIA Scanner";
@@ -138,7 +146,7 @@ public class WIAService {
             r.message = "WIA disabled. Set wia.enabled=true and install JACOB/JNA.";
             return r;
         }
-        
+
         // Check if JACOB is available
         try {
             Class.forName("com.jacob.com.ComThread");
@@ -147,7 +155,7 @@ public class WIAService {
             r.message = "JACOB library not available. Install jacob.jar in lib/ directory to enable Windows WIA support.";
             return r;
         }
-        
+
         try {
             com.jacob.com.ComThread.InitSTA();
             // Connect to scanner
@@ -159,7 +167,10 @@ public class WIAService {
             for (int i = 1; i <= count; i++) {
                 com.jacob.com.Dispatch item = com.jacob.com.Dispatch.call(devices, "Item", i).toDispatch();
                 String id = com.jacob.com.Dispatch.get(item, "DeviceID").toString();
-                if (rawId.equals(id)) { target = item; break; }
+                if (rawId.equals(id)) {
+                    target = item;
+                    break;
+                }
             }
             if (target == null) {
                 r.status = "ERROR";
@@ -167,201 +178,200 @@ public class WIAService {
                 return r;
             }
 
-            com.jacob.com.Dispatch device = com.jacob.com.Dispatch.call(target, "Connect").toDispatch();
+            com.jacob.com.Dispatch device = null;
+            int connectRetries = 3;
+            while (connectRetries > 0) {
+                try {
+                    device = com.jacob.com.Dispatch.call(target, "Connect").toDispatch();
+                    break;
+                } catch (com.jacob.com.ComFailException e) {
+                    connectRetries--;
+                    if (connectRetries > 0) {
+                        log.warn("WIA connect failed ({}). Retrying... ({} attempts left)", e.getMessage(),
+                                connectRetries);
+                        try {
+                            Thread.sleep(2000);
+                        } catch (InterruptedException ignore) {
+                        }
+                    } else {
+                        throw e;
+                    }
+                }
+            }
+
+            // Set Document Handling (Feeder vs Flatbed)
+            // 3088: WIA_DPS_DOCUMENT_HANDLING_SELECT
+            // Flags: 1=FEEDER, 2=FLATBED, 4=DUPLEX, 32=FRONT_AND_BACK
+            int handling = 2; // Default Flatbed
+            if (Boolean.TRUE.equals(options.adf)) {
+                handling = 1; // Feeder
+                if (Boolean.TRUE.equals(options.duplex)) {
+                    handling |= 4; // Add Duplex flag
+                    handling |= 32; // Add FRONT_AND_BACK (very important for some drivers)
+                    log.debug("WIA: Duplex scanning enabled (flags: {})", handling);
+                }
+            }
+            setItemInt(device, 3088, handling);
+
+            // 3096: WIA_DPS_PAGES (0 = all pages from feeder)
+            if (Boolean.TRUE.equals(options.adf)) {
+                setItemInt(device, 3096, 0);
+            } else {
+                setItemInt(device, 3096, 1); // Only 1 page for non-ADF/single scan
+                log.debug("WIA: Single page scan requested (WIA_DPS_PAGES=1)");
+            }
+
             com.jacob.com.Dispatch items = com.jacob.com.Dispatch.get(device, "Items").toDispatch();
             int itemCount = com.jacob.com.Dispatch.get(items, "Count").getInt();
             log.debug("WIA: Device has {} item(s)", itemCount);
-            
-            // Try to find the best item (prefer flatbed scanner, item 1 is usually flatbed)
+
+            // Search for the best scanning item
             com.jacob.com.Dispatch item = null;
             if (itemCount > 0) {
-                item = com.jacob.com.Dispatch.call(items, "Item", 1).toDispatch();
-                try {
-                    String itemName = com.jacob.com.Dispatch.get(item, "ItemType").toString();
-                    log.debug("WIA: Using item 1, type: {}", itemName);
-                } catch (Throwable ignore) {}
+                // If ADF is requested, try to find the item with Feeder category
+                if (Boolean.TRUE.equals(options.adf)) {
+                    for (int i = 1; i <= itemCount; i++) {
+                        com.jacob.com.Dispatch candidate = com.jacob.com.Dispatch.call(items, "Item", i).toDispatch();
+                        try {
+                            // 4098: WIA_IPA_ITEM_CATEGORY (Feeder category is usually
+                            // {FE142255-C455-4749-A059-E63E971EBD9E})
+                            String category = safeGetProperty(candidate, "Properties", "Item Category");
+                            if (category != null && category.toUpperCase().contains("FE142255")) {
+                                item = candidate;
+                                log.debug("WIA: Found explicit Feeder item at index {}", i);
+                                break;
+                            }
+                        } catch (Throwable t) {
+                            log.debug("WIA: Error checking item {} category: {}", i, t.getMessage());
+                        }
+                    }
+                }
+
+                // Fallback to first item if no specific feeder item found
+                if (item == null) {
+                    item = com.jacob.com.Dispatch.call(items, "Item", 1).toDispatch();
+                    log.debug("WIA: Using default Item 1");
+                }
             }
-            
+
             if (item == null) {
                 r.status = "ERROR";
                 r.message = "Scanner has no available items";
                 return r;
             }
 
-            // Apply basic properties with error handling
-            log.debug("WIA: Setting scan properties - DPI: {}, Color: {}", 
-                options.dpi != null ? options.dpi : 300, options.colorMode);
-            
-            try {
-                setItemInt(item, 6147, mapColor(options.colorMode)); // Current Intent
-            } catch (Throwable e) {
-                log.debug("WIA: Could not set color mode: {}", e.getMessage());
-            }
-            
-            try {
-                int dpi = options.dpi != null ? options.dpi : 300;
-                setItemInt(item, 6146, dpi); // Horizontal Resolution
-                setItemInt(item, 6148, dpi); // Vertical Resolution
-            } catch (Throwable e) {
-                log.debug("WIA: Could not set DPI: {}", e.getMessage());
-            }
+            // Apply basic properties
+            setItemInt(item, 6147, mapColor(options.colorMode)); // Current Intent (approx)
+            setItemInt(item, 6146, options.dpi != null ? options.dpi : 300); // Horizontal Resolution
+            setItemInt(item, 6148, options.dpi != null ? options.dpi : 300); // Vertical Resolution
 
-            // TODO: If ADF requested, set feeder and handle multi-page loop
-            if (Boolean.TRUE.equals(options.adf)) {
-                // Example feeder setup (device- and driver-dependent)
-                // setItemInt(item, /*ADF enable*/ 3088, 1); // placeholder property id
-            }
+            List<byte[]> pageDatas = new ArrayList<>();
+            log.info("WIA Scan: adf={}, duplex={}, color={}, dpi={}, format={}",
+                    options.adf, options.duplex, options.colorMode, options.dpi, options.format);
 
-            // Acquire image (still image transfer)
-            // Try with format GUID first, fallback to default if that fails
-            com.jacob.com.Variant transferResult = null;
-            com.jacob.com.Dispatch imageFile = null;
-            
-            try {
-                log.debug("WIA: Attempting Transfer with format GUID: {}", formatGuid(options.format));
-                transferResult = com.jacob.com.Dispatch.call(item, "Transfer", formatGuid(options.format));
-                if (transferResult != null && !transferResult.isNull()) {
-                    imageFile = transferResult.toDispatch();
-                    log.debug("WIA: Transfer successful with format GUID");
-                }
-            } catch (Throwable e) {
-                log.warn("WIA: Transfer with format GUID failed: {}, trying default transfer", e.getMessage());
-            }
-            
-            // Fallback: Try transfer without format parameter (use driver default)
-            if (imageFile == null) {
-                try {
-                    log.debug("WIA: Attempting default Transfer (no format parameter)");
-                    transferResult = com.jacob.com.Dispatch.call(item, "Transfer");
-                    if (transferResult != null && !transferResult.isNull()) {
-                        imageFile = transferResult.toDispatch();
-                        log.info("WIA: Transfer successful with default format (Kyocera-compatible mode)");
+            while (true) {
+                com.jacob.com.Dispatch imageFile = null;
+                int retries = 3;
+                while (retries > 0) {
+                    try {
+                        imageFile = com.jacob.com.Dispatch.call(item, "Transfer", formatGuid(options.format))
+                                .toDispatch();
+                        break;
+                    } catch (com.jacob.com.ComFailException e) {
+                        String msg = e.getMessage().toLowerCase();
+                        if (msg.contains("no documents left") || msg.contains("0x80210003")
+                                || msg.contains("paper empty")) {
+                            log.debug("WIA: Loop terminated - no more pages available");
+                            break;
+                        }
+
+                        if (msg.contains("busy") || msg.contains("0x8004001f")) {
+                            retries--;
+                            log.warn("WIA device busy, retrying... ({} attempts left)", retries);
+                            try {
+                                Thread.sleep(1500);
+                            } catch (InterruptedException ignore) {
+                            }
+                        } else {
+                            throw e;
+                        }
                     }
-                } catch (Throwable e) {
-                    log.error("WIA: Default transfer also failed: {}", e.getMessage());
                 }
-            }
-            
-            if (imageFile == null) {
-                r.status = "ERROR";
-                r.message = "Scanner transfer failed - no image returned from device. " +
-                    "This Kyocera scanner may have limited WIA support. " +
-                    "RECOMMENDED: Use eSCL network scanning instead. " +
-                    "Configure the scanner's IP address in application.properties: escl.manual-ips=<scanner-ip>";
-                log.error("WIA: Transfer failed for both format-specific and default methods. " +
-                    "Kyocera scanners often have better eSCL support than WIA.");
-                return r;
-            }
-            
-            byte[] data = null;
-            
-            // Method 1: Try FileData.BinaryData (works for most HP, Canon, Epson drivers)
-            try {
-                com.jacob.com.Variant fileDataVar = com.jacob.com.Dispatch.get(imageFile, "FileData");
-                if (fileDataVar != null && !fileDataVar.isNull()) {
-                    com.jacob.com.Dispatch fileDataDisp = fileDataVar.toDispatch();
-                    if (fileDataDisp != null) {
+
+                if (imageFile == null) {
+                    break;
+                }
+
+                byte[] data = null;
+                try {
+                    com.jacob.com.Variant fileDataVar = com.jacob.com.Dispatch.get(imageFile, "FileData");
+                    if (fileDataVar != null && !fileDataVar.isNull()) {
+                        com.jacob.com.Dispatch fileDataDisp = fileDataVar.toDispatch();
                         com.jacob.com.Variant binVar = com.jacob.com.Dispatch.get(fileDataDisp, "BinaryData");
-                        if (binVar != null && !binVar.isNull()) {
+                        if (binVar != null) {
                             try {
                                 com.jacob.com.SafeArray sa = binVar.toSafeArray();
-                                if (sa != null) {
-                                    data = sa.toByteArray();
-                                    log.debug("WIA: Retrieved {} bytes via FileData.BinaryData", data.length);
+                                data = (byte[]) sa.toByteArray();
+                            } catch (Throwable ignore2) {
+                                try {
+                                    data = (byte[]) binVar.toJavaObject();
+                                } catch (Throwable ignore3) {
                                 }
-                            } catch (Throwable e) {
-                                log.debug("WIA: SafeArray conversion failed, trying direct cast: {}", e.getMessage());
-                                try { 
-                                    Object obj = binVar.toJavaObject();
-                                    if (obj instanceof byte[]) {
-                                        data = (byte[]) obj;
-                                        log.debug("WIA: Retrieved {} bytes via direct cast", data.length);
-                                    }
-                                } catch (Throwable ignore) {}
                             }
                         }
                     }
+                } catch (Throwable ignore) {
                 }
-            } catch (Throwable e) {
-                log.debug("WIA: FileData method failed: {}", e.getMessage());
-            }
 
-            // Method 2: Try FileName property (some drivers save to temp automatically)
-            if (data == null) {
-                try {
-                    com.jacob.com.Variant fileNameVar = com.jacob.com.Dispatch.get(imageFile, "FileName");
-                    if (fileNameVar != null && !fileNameVar.isNull()) {
-                        String filePath = fileNameVar.toString();
-                        if (filePath != null && !filePath.isEmpty() && !filePath.equals("null")) {
-                            java.nio.file.Path path = java.nio.file.Paths.get(filePath);
-                            if (java.nio.file.Files.exists(path)) {
-                                data = java.nio.file.Files.readAllBytes(path);
-                                log.debug("WIA: Retrieved {} bytes from FileName: {}", data.length, filePath);
-                            }
-                        }
+                if (data == null) {
+                    try {
+                        String filePath = com.jacob.com.Dispatch.get(imageFile, "FileName").toString();
+                        java.nio.file.Path path = java.nio.file.Paths.get(filePath);
+                        data = java.nio.file.Files.readAllBytes(path);
+                    } catch (Throwable t) {
+                        log.warn("WIA image retrieval failed (FileData/FileName). {}", t.getMessage());
                     }
-                } catch (Throwable e) {
-                    log.debug("WIA: FileName method failed: {}", e.getMessage());
                 }
-            }
 
-            // Method 3: Force save to temp file (works for Kyocera and other stubborn drivers)
-            if (data == null) {
-                java.io.File tempFile = null;
-                try {
-                    // Use PNG extension for better compatibility
-                    String ext = options.format != null ? options.format.toLowerCase() : "png";
-                    if ("pdf".equals(ext)) ext = "png"; // Can't save directly as PDF
-                    tempFile = java.io.File.createTempFile("wia_scan_", "." + ext);
-                    String tempPath = tempFile.getAbsolutePath();
-                    log.debug("WIA: Attempting SaveFile to: {}", tempPath);
-                    
-                    // Call ImageFile.SaveFile(filename) - this forces the driver to write
-                    com.jacob.com.Variant saveResult = com.jacob.com.Dispatch.call(imageFile, "SaveFile", new com.jacob.com.Variant(tempPath));
-                    
-                    // Wait a moment for file to be written
-                    Thread.sleep(100);
-                    
-                    // Verify file was created and has content
-                    if (tempFile.exists() && tempFile.length() > 0) {
-                        data = java.nio.file.Files.readAllBytes(tempFile.toPath());
-                        log.info("WIA: Successfully retrieved {} bytes via SaveFile method (Kyocera-compatible)", data.length);
-                    } else {
-                        log.warn("WIA: SaveFile completed but file is empty or missing");
-                    }
-                } catch (Throwable e) {
-                    log.warn("WIA: SaveFile method failed: {}", e.getMessage());
-                } finally {
-                    // Clean up temp file
-                    if (tempFile != null && tempFile.exists()) {
-                        try { 
-                            tempFile.delete(); 
-                            log.debug("WIA: Cleaned up temp file");
-                        } catch (Throwable ignore) {}
-                    }
+                if (data != null) {
+                    pageDatas.add(data);
+                    log.info("WIA: Captured page {}, total size: {} bytes", pageDatas.size(), data.length);
+                }
+
+                if (!Boolean.TRUE.equals(options.adf)) {
+                    break;
                 }
             }
 
-            // Final validation
-            if (data == null || data.length == 0) {
-                log.error("WIA: All image retrieval methods failed (FileData, FileName, SaveFile)");
+            log.info("WIA Scan: Completed, captured {} total page(s)", pageDatas.size());
+
+            if (pageDatas.isEmpty()) {
                 r.status = "ERROR";
-                r.message = "Scanner driver did not provide image data. This may be a driver compatibility issue. Try: 1) Update scanner drivers, 2) Use manufacturer's scanning software, or 3) Try eSCL network scanning if available.";
+                r.message = "Failed to retrieve any image data from WIA device";
                 return r;
             }
 
             // Convert to PDF if requested
-            byte[] out = data;
+            byte[] out = null;
             String fmt = options.format == null ? "pdf" : options.format.toLowerCase();
             if ("pdf".equals(fmt)) {
-                out = com.lci.scannerdesktop.escl.ESCLService.class // reuse image->PDF helper via iText locally
-                        .getResourceAsStream("") == null ? toPdf(data) : toPdf(data);
+                out = toPdf(pageDatas);
+                if (out == null) {
+                    r.status = "ERROR";
+                    r.message = "Failed to convert scanned pages to PDF";
+                    return r;
+                }
+            } else {
+                // Return only the first page for image formats unless a specific multi-page
+                // format is used
+                out = pageDatas.get(0);
             }
 
             r.status = "SUCCESS";
             r.fileData = out;
             r.fileFormat = fmt;
-            r.fileName = (options.outputFileName == null || options.outputFileName.isBlank() ? "wia_scan" : options.outputFileName) + "." + fmt;
+            r.fileName = (options.outputFileName == null || options.outputFileName.isBlank() ? "wia_scan"
+                    : options.outputFileName) + "." + fmt;
             r.message = "OK";
             return r;
         } catch (Throwable t) {
@@ -369,7 +379,10 @@ public class WIAService {
             r.message = t.getMessage();
             return r;
         } finally {
-            try { com.jacob.com.ComThread.Release(); } catch (Throwable ignore) {}
+            try {
+                com.jacob.com.ComThread.Release();
+            } catch (Throwable ignore) {
+            }
         }
     }
 
@@ -380,69 +393,98 @@ public class WIAService {
             for (int i = 1; i <= count; i++) {
                 com.jacob.com.Dispatch p = com.jacob.com.Dispatch.call(props, "Item", i).toDispatch();
                 String name = com.jacob.com.Dispatch.get(p, "Name").toString();
-                if (propName.equalsIgnoreCase(name)) return com.jacob.com.Dispatch.get(p, "Value").toString();
+                if (propName.equalsIgnoreCase(name))
+                    return com.jacob.com.Dispatch.get(p, "Value").toString();
             }
-        } catch (Throwable ignore) {}
+        } catch (Throwable ignore) {
+        }
         return null;
     }
 
-    private void setItemInt(com.jacob.com.Dispatch item, int propertyId, int value) {
+    private void setItemInt(com.jacob.com.Dispatch target, int propertyId, int value) {
         try {
-            com.jacob.com.Dispatch properties = com.jacob.com.Dispatch.get(item, "Properties").toDispatch();
-            com.jacob.com.Dispatch property = com.jacob.com.Dispatch.call(properties, "Item", new com.jacob.com.Variant(propertyId)).toDispatch();
+            com.jacob.com.Dispatch properties = com.jacob.com.Dispatch.get(target, "Properties").toDispatch();
+            com.jacob.com.Dispatch property = com.jacob.com.Dispatch
+                    .call(properties, "Item", new com.jacob.com.Variant(propertyId)).toDispatch();
             com.jacob.com.Dispatch.put(property, "Value", new com.jacob.com.Variant(value));
-        } catch (Throwable ignore) {}
+        } catch (Throwable ignore) {
+        }
     }
 
     private int mapColor(String color) {
-        if (color == null) return 0; // Color
+        if (color == null)
+            return 0; // Color
         switch (color.toLowerCase()) {
-            case "color": return 0; // WIA_INTENT_IMAGE_TYPE_COLOR
+            case "color":
+                return 0; // WIA_INTENT_IMAGE_TYPE_COLOR
             case "grayscale":
-            case "gray": return 1; // WIA_INTENT_IMAGE_TYPE_GRAYSCALE
+            case "gray":
+                return 1; // WIA_INTENT_IMAGE_TYPE_GRAYSCALE
             case "black and white":
             case "blackandwhite":
-            case "bw": return 2; // WIA_INTENT_IMAGE_TYPE_TEXT
-            default: return 0;
+            case "bw":
+                return 2; // WIA_INTENT_IMAGE_TYPE_TEXT
+            default:
+                return 0;
         }
     }
 
     private String formatGuid(String fmt) {
-        if (fmt == null) return "{B96B3CAF-0728-11D3-9D7B-0000F81EF32E}"; // PNG
+        if (fmt == null)
+            return "{B96B3CAF-0728-11D3-9D7B-0000F81EF32E}"; // PNG
         switch (fmt.toLowerCase()) {
-            case "pdf": return "{B96B3CAF-0728-11D3-9D7B-0000F81EF32E}"; // scan image; convert to PDF later
+            case "pdf":
+                return "{B96B3CAF-0728-11D3-9D7B-0000F81EF32E}"; // scan image; convert to PDF later
             case "jpg":
-            case "jpeg": return "{B96B3CAE-0728-11D3-9D7B-0000F81EF32E}"; // JPEG
-            case "png": return "{B96B3CAF-0728-11D3-9D7B-0000F81EF32E}"; // PNG
+            case "jpeg":
+                return "{B96B3CAE-0728-11D3-9D7B-0000F81EF32E}"; // JPEG
+            case "png":
+                return "{B96B3CAF-0728-11D3-9D7B-0000F81EF32E}"; // PNG
             case "tiff":
-            case "tif": return "{B96B3CB1-0728-11D3-9D7B-0000F81EF32E}"; // TIFF
-            default: return "{B96B3CAB-0728-11D3-9D7B-0000F81EF32E}"; // BMP
+            case "tif":
+                return "{B96B3CB1-0728-11D3-9D7B-0000F81EF32E}"; // TIFF
+            default:
+                return "{B96B3CAB-0728-11D3-9D7B-0000F81EF32E}"; // BMP
         }
     }
 
-    private byte[] toPdf(byte[] imageBytes) {
-        try (java.io.ByteArrayInputStream bis = new java.io.ByteArrayInputStream(imageBytes);
-             java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream()) {
-            java.awt.image.BufferedImage image = javax.imageio.ImageIO.read(bis);
-            if (image == null) return null;
-            com.itextpdf.text.Document document = new com.itextpdf.text.Document();
+    private byte[] toPdf(java.util.List<byte[]> allPageBytes) {
+        if (allPageBytes == null || allPageBytes.isEmpty())
+            return null;
+        try (java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream()) {
+            // Set PageSize to A4 and margins to zero for best fit
+            com.itextpdf.text.Document document = new com.itextpdf.text.Document(com.itextpdf.text.PageSize.A4, 0, 0, 0,
+                    0);
             com.itextpdf.text.pdf.PdfWriter.getInstance(document, baos);
             document.open();
-            java.io.ByteArrayOutputStream buf = new java.io.ByteArrayOutputStream();
-            javax.imageio.ImageIO.write(image, "png", buf);
-            com.itextpdf.text.Image pdfImage = com.itextpdf.text.Image.getInstance(buf.toByteArray());
-            float maxW = document.getPageSize().getWidth() - document.leftMargin() - document.rightMargin();
-            float maxH = document.getPageSize().getHeight() - document.topMargin() - document.bottomMargin();
-            pdfImage.scaleToFit(maxW, maxH);
-            pdfImage.setAlignment(com.itextpdf.text.Element.ALIGN_CENTER);
-            document.add(pdfImage);
+
+            for (byte[] imageBytes : allPageBytes) {
+                if (imageBytes == null)
+                    continue;
+                try (java.io.ByteArrayInputStream bis = new java.io.ByteArrayInputStream(imageBytes)) {
+                    java.awt.image.BufferedImage image = javax.imageio.ImageIO.read(bis);
+                    if (image == null)
+                        continue;
+
+                    java.io.ByteArrayOutputStream buf = new java.io.ByteArrayOutputStream();
+                    javax.imageio.ImageIO.write(image, "png", buf);
+                    com.itextpdf.text.Image pdfImage = com.itextpdf.text.Image.getInstance(buf.toByteArray());
+
+                    // Scale to fit the A4 page (width and height)
+                    pdfImage.scaleToFit(com.itextpdf.text.PageSize.A4.getWidth(),
+                            com.itextpdf.text.PageSize.A4.getHeight());
+                    pdfImage.setAlignment(com.itextpdf.text.Element.ALIGN_CENTER);
+
+                    document.add(pdfImage);
+                    document.newPage();
+                }
+            }
             document.close();
             return baos.toByteArray();
         } catch (Exception e) {
             log.warn("WIA image->PDF conversion failed: {}", e.getMessage());
-            return imageBytes;
+            return allPageBytes.get(0); // Fallback to first page
         }
     }
+
 }
-
-

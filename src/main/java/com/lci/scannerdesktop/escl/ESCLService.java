@@ -1,15 +1,11 @@
 package com.lci.scannerdesktop.escl;
 
 import com.itextpdf.text.Document;
-import com.itextpdf.text.Element;
-import com.itextpdf.text.Image;
 import com.itextpdf.text.pdf.PdfWriter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import javax.imageio.ImageIO;
 import javax.net.ssl.HttpsURLConnection;
-import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
@@ -80,25 +76,29 @@ public class ESCLService {
             List<CompletableFuture<List<ScannerInfo>>> futures = new ArrayList<>();
             while (nics.hasMoreElements()) {
                 NetworkInterface nic = nics.nextElement();
-                if (nic.isLoopback() || !nic.isUp()) continue;
+                if (nic.isLoopback() || !nic.isUp())
+                    continue;
                 futures.add(CompletableFuture.supplyAsync(() -> scanInterface(nic)));
             }
             for (CompletableFuture<List<ScannerInfo>> f : futures) {
                 try {
                     scanners.addAll(f.get(discoveryTimeoutMs, TimeUnit.MILLISECONDS));
-                } catch (Exception ignore) {}
+                } catch (Exception ignore) {
+                }
             }
             // Manual IPs
             for (String ip : config.getManualIpList()) {
                 ScannerInfo si = probeIp(ip);
-                if (si != null) scanners.add(si);
+                if (si != null)
+                    scanners.add(si);
             }
         } catch (Exception e) {
             log.warn("ESCL discovery failed: {}", e.getMessage());
         }
         // de-dup by devicePath
         Map<String, ScannerInfo> unique = new LinkedHashMap<>();
-        for (ScannerInfo s : scanners) unique.put(s.devicePath, s);
+        for (ScannerInfo s : scanners)
+            unique.put(s.devicePath, s);
         cache.clear();
         cache.putAll(unique);
         return new ArrayList<>(cache.values());
@@ -113,28 +113,46 @@ public class ESCLService {
         caps.adfSupported = true;
         try {
             String xml = get(baseUrl + "/eSCL/ScannerCapabilities");
-            if (xml == null) return defaults(caps);
+            if (xml == null)
+                return defaults(caps);
             // Resolutions
-            java.util.regex.Matcher mr = java.util.regex.Pattern.compile("<scan:(?:X|Y)Resolution>\\s*(\\d+)\\s*</scan:(?:X|Y)Resolution>", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(xml);
+            java.util.regex.Matcher mr = java.util.regex.Pattern
+                    .compile("<scan:(?:X|Y)Resolution>\\s*(\\d+)\\s*</scan:(?:X|Y)Resolution>",
+                            java.util.regex.Pattern.CASE_INSENSITIVE)
+                    .matcher(xml);
             java.util.Set<Integer> resset = new java.util.TreeSet<>();
             while (mr.find()) {
-                try { resset.add(Integer.parseInt(mr.group(1))); } catch (Exception ignore) {}
+                try {
+                    resset.add(Integer.parseInt(mr.group(1)));
+                } catch (Exception ignore) {
+                }
             }
-            if (!resset.isEmpty()) caps.supportedResolutions = new ArrayList<>(resset);
+            if (!resset.isEmpty())
+                caps.supportedResolutions = new ArrayList<>(resset);
             // Formats
-            if (xml.toLowerCase().contains("application/pdf")) caps.supportedFormats.add("pdf");
-            if (xml.toLowerCase().contains("image/jpeg")) caps.supportedFormats.add("jpg");
-            if (xml.toLowerCase().contains("image/png")) caps.supportedFormats.add("png");
-            if (xml.toLowerCase().contains("image/tiff")) caps.supportedFormats.add("tiff");
-            if (caps.supportedFormats.isEmpty()) caps.supportedFormats = java.util.Arrays.asList("pdf","jpg","png","tiff");
+            if (xml.toLowerCase().contains("application/pdf"))
+                caps.supportedFormats.add("pdf");
+            if (xml.toLowerCase().contains("image/jpeg"))
+                caps.supportedFormats.add("jpg");
+            if (xml.toLowerCase().contains("image/png"))
+                caps.supportedFormats.add("png");
+            if (xml.toLowerCase().contains("image/tiff"))
+                caps.supportedFormats.add("tiff");
+            if (caps.supportedFormats.isEmpty())
+                caps.supportedFormats = java.util.Arrays.asList("pdf", "jpg", "png", "tiff");
             // Color modes
-            if (xml.toLowerCase().contains("rgb24")) caps.supportedColorModes.add("Color");
-            if (xml.toLowerCase().contains("grayscale8")) caps.supportedColorModes.add("Grayscale");
-            if (xml.toLowerCase().contains("blackandwhite1")) caps.supportedColorModes.add("Black and White");
-            if (caps.supportedColorModes.isEmpty()) caps.supportedColorModes = java.util.Arrays.asList("Color","Grayscale","Black and White");
+            if (xml.toLowerCase().contains("rgb24"))
+                caps.supportedColorModes.add("Color");
+            if (xml.toLowerCase().contains("grayscale8"))
+                caps.supportedColorModes.add("Grayscale");
+            if (xml.toLowerCase().contains("blackandwhite1"))
+                caps.supportedColorModes.add("Black and White");
+            if (caps.supportedColorModes.isEmpty())
+                caps.supportedColorModes = java.util.Arrays.asList("Color", "Grayscale", "Black and White");
             // ADF/duplex hints
             String lower = xml.toLowerCase();
-            caps.adfSupported = lower.contains("<scan:inputsource>feeder</scan:inputsource>") || lower.contains("feeder");
+            caps.adfSupported = lower.contains("<scan:inputsource>feeder</scan:inputsource>")
+                    || lower.contains("feeder");
             caps.duplexSupported = lower.contains("duplex") || caps.adfSupported;
             return caps;
         } catch (Exception e) {
@@ -143,10 +161,14 @@ public class ESCLService {
     }
 
     private Capabilities defaults(Capabilities c) {
-        if (c.supportedResolutions == null || c.supportedResolutions.isEmpty()) c.supportedResolutions = java.util.Arrays.asList(150,200,300,600);
-        if (c.supportedFormats == null || c.supportedFormats.isEmpty()) c.supportedFormats = java.util.Arrays.asList("pdf","jpg","png","tiff");
-        if (c.supportedColorModes == null || c.supportedColorModes.isEmpty()) c.supportedColorModes = java.util.Arrays.asList("Color","Grayscale","Black and White");
-        if (!c.adfSupported) c.adfSupported = true;
+        if (c.supportedResolutions == null || c.supportedResolutions.isEmpty())
+            c.supportedResolutions = java.util.Arrays.asList(150, 200, 300, 600);
+        if (c.supportedFormats == null || c.supportedFormats.isEmpty())
+            c.supportedFormats = java.util.Arrays.asList("pdf", "jpg", "png", "tiff");
+        if (c.supportedColorModes == null || c.supportedColorModes.isEmpty())
+            c.supportedColorModes = java.util.Arrays.asList("Color", "Grayscale", "Black and White");
+        if (!c.adfSupported)
+            c.adfSupported = true;
         return c;
     }
 
@@ -154,7 +176,8 @@ public class ESCLService {
         List<ScannerInfo> found = new ArrayList<>();
         for (InterfaceAddress ia : nic.getInterfaceAddresses()) {
             InetAddress addr = ia.getAddress();
-            if (!(addr instanceof Inet4Address) || !addr.isSiteLocalAddress()) continue;
+            if (!(addr instanceof Inet4Address) || !addr.isSiteLocalAddress())
+                continue;
             String base = addr.getHostAddress();
             base = base.substring(0, base.lastIndexOf('.'));
             List<CompletableFuture<ScannerInfo>> futures = new ArrayList<>();
@@ -166,8 +189,10 @@ public class ESCLService {
             for (CompletableFuture<ScannerInfo> f : futures) {
                 try {
                     ScannerInfo si = f.get(connectionTimeoutMs, TimeUnit.MILLISECONDS);
-                    if (si != null) found.add(si);
-                } catch (Exception ignore) {}
+                    if (si != null)
+                        found.add(si);
+                } catch (Exception ignore) {
+                }
             }
         }
         return found;
@@ -177,7 +202,8 @@ public class ESCLService {
         for (String p : ports) {
             try {
                 int port = Integer.parseInt(p);
-                String base = (port == 443 ? "https://" : "http://") + ip + ((port == 80 || port == 443) ? "" : ":" + port);
+                String base = (port == 443 ? "https://" : "http://") + ip
+                        + ((port == 80 || port == 443) ? "" : ":" + port);
                 String caps = get(base + "/eSCL/ScannerCapabilities");
                 if (caps != null) {
                     ScannerInfo si = new ScannerInfo();
@@ -186,10 +212,12 @@ public class ESCLService {
                     si.connected = true;
                     si.status = "eSCL Network Scanner";
                     si.name = extractName(caps);
-                    if (si.name == null || si.name.isBlank()) si.name = "Network Scanner (" + ip + ")";
+                    if (si.name == null || si.name.isBlank())
+                        si.name = "Network Scanner (" + ip + ")";
                     return si;
                 }
-            } catch (Exception ignore) {}
+            } catch (Exception ignore) {
+            }
         }
         return null;
     }
@@ -213,48 +241,64 @@ public class ESCLService {
                 return result;
             }
             String loc = c.getHeaderField("Location");
-            if (loc == null || !loc.startsWith("http")) loc = baseUrl + "/eSCL/ScanJobs/1";
+            if (loc == null || !loc.startsWith("http"))
+                loc = baseUrl + "/eSCL/ScanJobs/1";
 
             // Poll NextDocument
-            byte[] data = null;
-            for (int i = 0; i < 60; i++) {
-                Thread.sleep(1000);
+            List<byte[]> pageDatas = new ArrayList<>();
+            boolean moreDocuments = true;
+            int retriesSinceLastDoc = 0;
+
+            while (moreDocuments && retriesSinceLastDoc < 30) {
                 HttpURLConnection d = connect(loc + "/NextDocument");
                 d.setRequestMethod("GET");
                 d.setReadTimeout(scanTimeoutMs);
                 int rc = d.getResponseCode();
+
                 if (rc == 200) {
-                    try (InputStream is = d.getInputStream(); ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                    try (InputStream is = d.getInputStream();
+                            ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
                         byte[] buf = new byte[8192];
                         int r;
-                        while ((r = is.read(buf)) != -1) baos.write(buf, 0, r);
-                        data = baos.toByteArray();
-                        break;
+                        while ((r = is.read(buf)) != -1)
+                            baos.write(buf, 0, r);
+                        pageDatas.add(baos.toByteArray());
+                        retriesSinceLastDoc = 0; // Reset retries on success
                     }
                 } else if (rc == 503) {
-                    continue; // busy
+                    retriesSinceLastDoc++;
+                    Thread.sleep(1000); // Busy, wait and retry
                 } else if (rc == 404) {
-                    break; // done/not found
+                    moreDocuments = false; // Done
+                } else {
+                    moreDocuments = false; // Unexpected error
+                }
+
+                // If not ADF, we only want one page
+                if (!Boolean.TRUE.equals(options.adf) && !pageDatas.isEmpty()) {
+                    moreDocuments = false;
                 }
             }
 
-            if (data == null || data.length == 0) {
+            if (pageDatas.isEmpty()) {
                 result.status = "ERROR";
                 result.message = "No scan data";
                 return result;
             }
 
             String fmt = (options.format == null ? "pdf" : options.format.toLowerCase());
-            byte[] finalBytes = data;
-            if ("pdf".equals(fmt) && !isPdf(data)) {
-                byte[] pdf = toPdf(data);
-                if (pdf != null && isPdf(pdf)) finalBytes = pdf;
+            byte[] finalBytes = null;
+            if ("pdf".equals(fmt)) {
+                finalBytes = toPdf(pageDatas);
+            } else {
+                finalBytes = pageDatas.get(0);
             }
 
             result.status = "SUCCESS";
             result.fileData = finalBytes;
             result.fileFormat = fmt;
-            String baseName = (options.outputFileName == null || options.outputFileName.isBlank()) ? "escl_scan" : options.outputFileName.trim();
+            String baseName = (options.outputFileName == null || options.outputFileName.isBlank()) ? "escl_scan"
+                    : options.outputFileName.trim();
             String ts = LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
             result.fileName = baseName + "_" + ts + "." + fmt;
             result.message = "OK";
@@ -272,7 +316,8 @@ public class ESCLService {
         String color = mapColor(o.colorMode);
         String mime = mapMime(o.format);
         return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
-                "<scan:ScanSettings xmlns:scan=\"http://schemas.hp.com/imaging/escl/2011/05/03\" xmlns:pwg=\"http://www.pwg.org/schemas/2010/12/sm\">\n" +
+                "<scan:ScanSettings xmlns:scan=\"http://schemas.hp.com/imaging/escl/2011/05/03\" xmlns:pwg=\"http://www.pwg.org/schemas/2010/12/sm\">\n"
+                +
                 "  <pwg:Version>2.0</pwg:Version>\n" +
                 "  <scan:Intent>Document</scan:Intent>\n" +
                 "  <scan:DocumentFormat>" + mime + "</scan:DocumentFormat>\n" +
@@ -284,65 +329,76 @@ public class ESCLService {
     }
 
     private String mapMime(String fmt) {
-        if (fmt == null) return "application/pdf";
+        if (fmt == null)
+            return "application/pdf";
         switch (fmt.toLowerCase()) {
-            case "pdf": return "application/pdf";
+            case "pdf":
+                return "application/pdf";
             case "jpg":
-            case "jpeg": return "image/jpeg";
-            case "png": return "image/png";
+            case "jpeg":
+                return "image/jpeg";
+            case "png":
+                return "image/png";
             case "tiff":
-            case "tif": return "image/tiff";
-            default: return "application/pdf";
+            case "tif":
+                return "image/tiff";
+            default:
+                return "application/pdf";
         }
     }
 
     private String mapColor(String color) {
-        if (color == null) return "RGB24";
+        if (color == null)
+            return "RGB24";
         switch (color.toLowerCase()) {
-            case "color": return "RGB24";
+            case "color":
+                return "RGB24";
             case "grayscale":
-            case "gray": return "Grayscale8";
+            case "gray":
+                return "Grayscale8";
             case "black and white":
             case "blackandwhite":
-            case "bw": return "BlackAndWhite1";
-            default: return "RGB24";
+            case "bw":
+                return "BlackAndWhite1";
+            default:
+                return "RGB24";
         }
     }
 
-    private boolean isPdf(byte[] data) {
-        if (data == null || data.length < 5) return false;
-        try {
-            String header = new String(data, 0, Math.min(8, data.length), StandardCharsets.ISO_8859_1);
-            if (!header.startsWith("%PDF-")) return false;
-            String tail = new String(data, Math.max(0, data.length - 20), Math.min(20, data.length), StandardCharsets.ISO_8859_1);
-            return tail.contains("%%EOF") || tail.contains("EOF");
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    private byte[] toPdf(byte[] imgBytes) {
-        try (ByteArrayInputStream bis = new ByteArrayInputStream(imgBytes);
-             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-            BufferedImage image = ImageIO.read(bis);
-            if (image == null) return null;
-
+    private byte[] toPdf(List<byte[]> allPageBytes) {
+        if (allPageBytes == null || allPageBytes.isEmpty())
+            return null;
+        try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Document doc = new Document();
             PdfWriter.getInstance(doc, out);
             doc.open();
-            ByteArrayOutputStream tmp = new ByteArrayOutputStream();
-            ImageIO.write(image, "png", tmp);
-            Image pdfImg = Image.getInstance(tmp.toByteArray());
-            float maxW = doc.getPageSize().getWidth() - doc.leftMargin() - doc.rightMargin();
-            float maxH = doc.getPageSize().getHeight() - doc.topMargin() - doc.bottomMargin();
-            pdfImg.scaleToFit(maxW, maxH);
-            pdfImg.setAlignment(Element.ALIGN_CENTER);
-            doc.add(pdfImg);
+
+            for (byte[] imageData : allPageBytes) {
+                if (imageData == null)
+                    continue;
+                try (ByteArrayInputStream bis = new ByteArrayInputStream(imageData)) {
+                    java.awt.image.BufferedImage image = javax.imageio.ImageIO.read(bis);
+                    if (image == null)
+                        continue;
+
+                    ByteArrayOutputStream img = new ByteArrayOutputStream();
+                    javax.imageio.ImageIO.write(image, "png", img);
+                    com.itextpdf.text.Image pdfImage = com.itextpdf.text.Image.getInstance(img.toByteArray());
+
+                    float maxW = doc.getPageSize().getWidth() - doc.leftMargin() - doc.rightMargin();
+                    float maxH = doc.getPageSize().getHeight() - doc.topMargin() - doc.bottomMargin();
+                    pdfImage.scaleToFit(maxW, maxH);
+                    pdfImage.setAlignment(com.itextpdf.text.Element.ALIGN_CENTER);
+
+                    doc.add(pdfImage);
+                    doc.newPage();
+                }
+            }
             doc.close();
             return out.toByteArray();
         } catch (Exception e) {
-            log.warn("Image to PDF failed: {}", e.getMessage());
-            return null;
+            log.warn("eSCL image->PDF failed: {}", e.getMessage());
+            return allPageBytes.get(0);
         }
     }
 
@@ -355,13 +411,20 @@ public class ESCLService {
             h.setHostnameVerifier((s, session) -> true);
             try {
                 javax.net.ssl.SSLContext ctx = javax.net.ssl.SSLContext.getInstance("TLS");
-                ctx.init(null, new javax.net.ssl.TrustManager[]{new javax.net.ssl.X509TrustManager() {
-                    public void checkClientTrusted(java.security.cert.X509Certificate[] xcs, String s) {}
-                    public void checkServerTrusted(java.security.cert.X509Certificate[] xcs, String s) {}
-                    public java.security.cert.X509Certificate[] getAcceptedIssuers() { return new java.security.cert.X509Certificate[0]; }
-                }}, new java.security.SecureRandom());
+                ctx.init(null, new javax.net.ssl.TrustManager[] { new javax.net.ssl.X509TrustManager() {
+                    public void checkClientTrusted(java.security.cert.X509Certificate[] xcs, String s) {
+                    }
+
+                    public void checkServerTrusted(java.security.cert.X509Certificate[] xcs, String s) {
+                    }
+
+                    public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+                        return new java.security.cert.X509Certificate[0];
+                    }
+                } }, new java.security.SecureRandom());
                 h.setSSLSocketFactory(ctx.getSocketFactory());
-            } catch (Exception ignore) {}
+            } catch (Exception ignore) {
+            }
         }
         c.setConnectTimeout(connectionTimeoutMs);
         c.setReadTimeout(connectionTimeoutMs);
@@ -373,11 +436,14 @@ public class ESCLService {
             HttpURLConnection c = connect(url);
             c.setRequestMethod("GET");
             int code = c.getResponseCode();
-            if (code != 200) return null;
-            try (BufferedReader r = new BufferedReader(new InputStreamReader(c.getInputStream(), StandardCharsets.UTF_8))) {
+            if (code != 200)
+                return null;
+            try (BufferedReader r = new BufferedReader(
+                    new InputStreamReader(c.getInputStream(), StandardCharsets.UTF_8))) {
                 StringBuilder sb = new StringBuilder();
                 String line;
-                while ((line = r.readLine()) != null) sb.append(line).append('\n');
+                while ((line = r.readLine()) != null)
+                    sb.append(line).append('\n');
                 return sb.toString();
             }
         } catch (Exception e) {
@@ -387,19 +453,20 @@ public class ESCLService {
 
     private String extractName(String capsXml) {
         try {
-            String[] patterns = new String[]{
+            String[] patterns = new String[] {
                     "<scan:MakeAndModel>([^<]+)</scan:MakeAndModel>",
                     "<scan:Make>([^<]+)</scan:Make>",
                     "<scan:Model>([^<]+)</scan:Model>",
                     "<pwg:MakeAndModel>([^<]+)</pwg:MakeAndModel>"
             };
             for (String p : patterns) {
-                java.util.regex.Matcher m = java.util.regex.Pattern.compile(p, java.util.regex.Pattern.CASE_INSENSITIVE).matcher(capsXml);
-                if (m.find()) return m.group(1);
+                java.util.regex.Matcher m = java.util.regex.Pattern.compile(p, java.util.regex.Pattern.CASE_INSENSITIVE)
+                        .matcher(capsXml);
+                if (m.find())
+                    return m.group(1);
             }
-        } catch (Exception ignore) {}
+        } catch (Exception ignore) {
+        }
         return null;
     }
 }
-
-

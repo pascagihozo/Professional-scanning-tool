@@ -33,7 +33,7 @@
       <artifactId>jacob</artifactId>
       <version>1.21</version>
       <scope>system</scope>
-      <systemPath>${project.basedir}/lib/jacob.jar</systemPath>
+      <systemPath>${basedir}/lib/jacob.jar</systemPath>
       <optional>true</optional>
     </dependency>
   </dependencies>

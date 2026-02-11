@@ -3,12 +3,8 @@
 
 # Log files
 *.log
-
-# BlueJ files
-*.ctxt
-
-# Mobile Tools for Java (J2ME)
-.mtj.tmp/
+hs_err_pid*
+replay_pid*
 
 # Package Files
 *.jar
@@ -20,10 +16,6 @@
 *.tar.gz
 *.rar
 
-# Virtual machine crash logs
-hs_err_pid*
-replay_pid*
-
 # Maven
 target/
 pom.xml.tag
@@ -34,94 +26,45 @@ release.properties
 dependency-reduced-pom.xml
 buildNumber.properties
 .mvn/timing.properties
-.mvn/wrapper/maven-wrapper.jar
 
-# Gradle
-.gradle
-build/
-!gradle/wrapper/gradle-wrapper.jar
-!**/src/main/**/build/
-!**/src/test/**/build/
-
-# IntelliJ IDEA
+# IDEs
 .idea/
 *.iws
 *.iml
 *.ipr
 out/
-!**/src/main/**/out/
-!**/src/test/**/out/
-
-# Eclipse
-.apt_generated
+.vscode/
 .classpath
-.factorypath
 .project
 .settings
-.springBeans
-.sts4-cache
-bin/
-!**/src/main/**/bin/
-!**/src/test/**/bin/
+.factorypath
 
-# NetBeans
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-
-# VS Code
-.vscode/
-
-# Mac
+# OS files
 .DS_Store
-
-# Windows
 Thumbs.db
-ehthumbs.db
 Desktop.ini
 
-# Linux
-*~
-
-# Temporary files
+# Temporary and local test files
 *.tmp
 *.temp
 *.swp
 *.swo
+*.json
+!pom.xml
+-la
 
-# Application specific
+# Build and Distribution
 dist/
 dist-fixed/
 dist-swagger/
 lib copy/
-ter
 
-# Runtime files (keep structure but ignore large binaries)
+# Runtime files
 runtime/bin/*.dll
 runtime/bin/*.exe
 runtime/lib/*.jar
 runtime/lib/*.dat
 
-# Scanner desktop client specific
-scanner-desktop-client/runtime/bin/*.dll
-scanner-desktop-client/runtime/bin/*.exe
-scanner-desktop-client/runtime/lib/*.jar
-scanner-desktop-client/runtime/lib/*.dat
-
-# Keep important runtime structure files
-!runtime/bin/
-!runtime/lib/
-!runtime/conf/
-!runtime/legal/
-!runtime/include/
-!runtime/release
-!runtime/security/
-!scanner-desktop-client/runtime/bin/
-!scanner-desktop-client/runtime/lib/
-!scanner-desktop-client/runtime/conf/
-!scanner-desktop-client/runtime/legal/
-!scanner-desktop-client/runtime/include/
-!scanner-desktop-client/runtime/release
-!scanner-desktop-client/runtime/security/
+# Specific ignores for this project
+alonix-scanning-tool.jar
+scanner-desktop-client/

@@ -50,7 +50,8 @@ public class SaneService {
 
     public List<ScannerInfo> discoverScanners() {
         List<ScannerInfo> list = new ArrayList<>();
-        if (!isUnixLike()) return list;
+        if (!isUnixLike())
+            return list;
         try {
             Process p = new ProcessBuilder("scanimage", "-L").redirectErrorStream(true).start();
             p.waitFor(5, TimeUnit.SECONDS);
@@ -86,44 +87,75 @@ public class SaneService {
             r.message = "SANE not available on this OS";
             return r;
         }
+
         Path tmp = null;
         try {
+            List<byte[]> pageDatas = new ArrayList<>();
             String fmt = options.format == null ? "pdf" : options.format.toLowerCase();
-            String outExt = "pdf".equals(fmt) ? "png" : mapExt(fmt); // scan to png if pdf requested
-            tmp = Files.createTempFile("sane_", "." + outExt);
+            String outExt = "pdf".equals(fmt) ? "png" : mapExt(fmt);
 
-            List<String> cmd = new ArrayList<>();
-            cmd.add("scanimage");
-            if (options.scannerId != null && options.scannerId.startsWith("sane_")) {
-                cmd.add("--device-name");
-                cmd.add(options.scannerId.substring(5));
+            boolean hasMorePages = true;
+            while (hasMorePages) {
+                tmp = Files.createTempFile("sane_", "." + outExt);
+                List<String> cmd = new ArrayList<>();
+                cmd.add("scanimage");
+                if (options.scannerId != null && options.scannerId.startsWith("sane_")) {
+                    cmd.add("--device-name");
+                    cmd.add(options.scannerId.substring(5));
+                }
+
+                // Set source for ADF
+                if (Boolean.TRUE.equals(options.adf)) {
+                    cmd.add("--source");
+                    cmd.add("ADF");
+                }
+
+                cmd.add("--resolution");
+                cmd.add(String.valueOf(options.dpi == null ? 300 : options.dpi));
+                cmd.add("--mode");
+                cmd.add(mapMode(options.colorMode));
+                cmd.add("--format");
+                cmd.add(outExt);
+                cmd.add("--output-file");
+                cmd.add(tmp.toString());
+
+                Process p = new ProcessBuilder(cmd).redirectErrorStream(true).start();
+                p.waitFor(120, TimeUnit.SECONDS);
+
+                if (p.exitValue() == 0 && Files.exists(tmp) && Files.size(tmp) > 0) {
+                    pageDatas.add(Files.readAllBytes(tmp));
+                    Files.deleteIfExists(tmp);
+
+                    // If not ADF, stop after one page
+                    if (!Boolean.TRUE.equals(options.adf)) {
+                        hasMorePages = false;
+                    }
+                } else {
+                    // If we were scanning from ADF and it fails, it might just be empty
+                    hasMorePages = false;
+                    if (tmp != null)
+                        Files.deleteIfExists(tmp);
+                }
             }
-            cmd.add("--resolution");
-            cmd.add(String.valueOf(options.dpi == null ? 300 : options.dpi));
-            cmd.add("--mode");
-            cmd.add(mapMode(options.colorMode));
-            cmd.add("--format");
-            cmd.add(outExt);
-            cmd.add("--output-file");
-            cmd.add(tmp.toString());
 
-            Process p = new ProcessBuilder(cmd).redirectErrorStream(true).start();
-            p.waitFor(120, TimeUnit.SECONDS);
-            if (p.exitValue() != 0 || !Files.exists(tmp) || Files.size(tmp) == 0) {
+            if (pageDatas.isEmpty()) {
                 r.status = "ERROR";
-                r.message = "SANE scan failed";
+                r.message = "SANE scan failed or no documents in feeder";
                 return r;
             }
 
-            byte[] data = Files.readAllBytes(tmp);
-            byte[] out = data;
+            byte[] out = null;
             if ("pdf".equals(fmt)) {
-                out = toPdf(data);
+                out = toPdf(pageDatas);
+            } else {
+                out = pageDatas.get(0);
             }
+
             r.status = "SUCCESS";
             r.fileFormat = fmt;
-            String base = (options.outputFileName == null || options.outputFileName.isBlank()) ? "sane_scan" : options.outputFileName;
-            r.fileName = base + "_" + UUID.randomUUID().toString().substring(0,8) + "." + fmt;
+            String base = (options.outputFileName == null || options.outputFileName.isBlank()) ? "sane_scan"
+                    : options.outputFileName;
+            r.fileName = base + "_" + UUID.randomUUID().toString().substring(0, 8) + "." + fmt;
             r.fileData = out;
             r.message = "OK";
             return r;
@@ -132,56 +164,81 @@ public class SaneService {
             r.message = e.getMessage();
             return r;
         } finally {
-            if (tmp != null) try { Files.deleteIfExists(tmp); } catch (Exception ignore) {}
+            if (tmp != null)
+                try {
+                    Files.deleteIfExists(tmp);
+                } catch (Exception ignore) {
+                }
         }
     }
 
     private String mapExt(String fmt) {
         switch (fmt) {
             case "jpg":
-            case "jpeg": return "jpeg";
-            case "png": return "png";
+            case "jpeg":
+                return "jpeg";
+            case "png":
+                return "png";
             case "tiff":
-            case "tif": return "tiff";
-            default: return "pnm";
+            case "tif":
+                return "tiff";
+            default:
+                return "pnm";
         }
     }
 
     private String mapMode(String color) {
-        if (color == null) return "Color";
+        if (color == null)
+            return "Color";
         switch (color.toLowerCase()) {
-            case "color": return "Color";
+            case "color":
+                return "Color";
             case "grayscale":
-            case "gray": return "Gray";
+            case "gray":
+                return "Gray";
             case "black and white":
-            case "bw": return "Lineart";
-            default: return "Color";
+            case "bw":
+                return "Lineart";
+            default:
+                return "Color";
         }
     }
 
-    private byte[] toPdf(byte[] imageData) {
-        try (ByteArrayInputStream bis = new ByteArrayInputStream(imageData);
-             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-            java.awt.image.BufferedImage image = javax.imageio.ImageIO.read(bis);
-            if (image == null) return imageData;
+    private byte[] toPdf(List<byte[]> allPageBytes) {
+        if (allPageBytes == null || allPageBytes.isEmpty())
+            return null;
+        try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             com.itextpdf.text.Document doc = new com.itextpdf.text.Document();
             com.itextpdf.text.pdf.PdfWriter.getInstance(doc, out);
             doc.open();
-            ByteArrayOutputStream img = new ByteArrayOutputStream();
-            javax.imageio.ImageIO.write(image, "png", img);
-            com.itextpdf.text.Image pdfImage = com.itextpdf.text.Image.getInstance(img.toByteArray());
-            float maxW = doc.getPageSize().getWidth() - doc.leftMargin() - doc.rightMargin();
-            float maxH = doc.getPageSize().getHeight() - doc.topMargin() - doc.bottomMargin();
-            pdfImage.scaleToFit(maxW, maxH);
-            pdfImage.setAlignment(com.itextpdf.text.Element.ALIGN_CENTER);
-            doc.add(pdfImage);
+
+            for (byte[] imageData : allPageBytes) {
+                if (imageData == null)
+                    continue;
+                try (ByteArrayInputStream bis = new ByteArrayInputStream(imageData)) {
+                    java.awt.image.BufferedImage image = javax.imageio.ImageIO.read(bis);
+                    if (image == null)
+                        continue;
+
+                    ByteArrayOutputStream img = new ByteArrayOutputStream();
+                    javax.imageio.ImageIO.write(image, "png", img);
+                    com.itextpdf.text.Image pdfImage = com.itextpdf.text.Image.getInstance(img.toByteArray());
+
+                    float maxW = doc.getPageSize().getWidth() - doc.leftMargin() - doc.rightMargin();
+                    float maxH = doc.getPageSize().getHeight() - doc.topMargin() - doc.bottomMargin();
+                    pdfImage.scaleToFit(maxW, maxH);
+                    pdfImage.setAlignment(com.itextpdf.text.Element.ALIGN_CENTER);
+
+                    doc.add(pdfImage);
+                    doc.newPage();
+                }
+            }
             doc.close();
             return out.toByteArray();
         } catch (Exception e) {
             log.warn("SANE image->PDF failed: {}", e.getMessage());
-            return imageData;
+            return allPageBytes.get(0);
         }
     }
+
 }
-
-

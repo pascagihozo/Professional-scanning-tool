@@ -20,28 +20,36 @@ public class JacobBootstrap {
 
     @PostConstruct
     public void init() {
-        if (!config.isEnabled()) return;
+        if (!config.isEnabled())
+            return;
         try {
             String arch = System.getProperty("os.arch", "").contains("64") ? "x64" : "x86";
-            Path libDir = Paths.get(System.getProperty("user.dir"), "scanner-desktop-client", "lib");
-            if (!Files.exists(libDir)) {
-                // also try project root lib fallback
-                libDir = Paths.get(System.getProperty("user.dir"), "lib");
-            }
-            String dllName = arch.equals("x64") ? "jacob-1.21-x64.dll" : "jacob-1.21-x86.dll";
-            Path dllPath = libDir.resolve(dllName);
-            Path jarPath = libDir.resolve("jacob.jar");
+            String dllName = "jacob-1.21-" + arch + ".dll";
+            String userDir = System.getProperty("user.dir");
 
-            if (!Files.exists(dllPath)) {
-                log.warn("JACOB DLL not found at {} — WIA will not work until provided.", dllPath.toAbsolutePath());
-                return;
+            Path[] searchPaths = {
+                    Paths.get(userDir, "app", "lib", dllName),
+                    Paths.get(userDir, "lib", dllName),
+                    Paths.get(userDir, "scanner-desktop-client", "lib", dllName)
+            };
+
+            Path foundPath = null;
+            for (Path p : searchPaths) {
+                if (Files.exists(p)) {
+                    foundPath = p;
+                    break;
+                }
             }
-            System.setProperty("jacob.dll.path", dllPath.toString());
-            log.info("Configured JACOB DLL: {}", dllPath.toAbsolutePath());
+
+            if (foundPath != null) {
+                String absolutePath = foundPath.toAbsolutePath().toString();
+                System.setProperty("jacob.dll.path", absolutePath);
+                log.info("JACOB DLL discovered and configured: {}", absolutePath);
+            } else {
+                log.warn("JACOB DLL ({}) not found in search paths.", dllName);
+            }
         } catch (Exception e) {
-            log.warn("Failed to configure JACOB: {}", e.getMessage());
+            log.error("Failed to initialize JACOB: ", e);
         }
     }
 }
-
-
