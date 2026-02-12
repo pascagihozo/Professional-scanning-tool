@@ -294,19 +294,29 @@ public class WIAService {
                     log.info("WIA: Item {} - Name: '{}', Category: {}", i, name, category);
                 }
 
-                // Try to find Feeder/Document item if useFeeder is true
-                if (useFeeder) {
-                    for (int i = 1; i <= itemCount; i++) {
-                        com.jacob.com.Dispatch candidate = com.jacob.com.Dispatch.call(items, "Item", i).toDispatch();
-                        String category = getItemString(candidate, 4125); // Use PID 4125 (Category)
-                        String catUpper = category != null ? category.toUpperCase() : "";
-                        // Feeder: FE142255 / Document: 6291BD2C / Scan (Generic): F193526F
-                        if (catUpper.contains("FE142255") || catUpper.contains("6291BD2C")
-                                || catUpper.contains("F193526F")) {
-                            item = candidate;
-                            log.info("WIA: Selected Feeder/Document/Scan item at index {} (Category: {})", i, category);
-                            break;
-                        }
+                // Find best sub-item
+                for (int i = 1; i <= itemCount; i++) {
+                    com.jacob.com.Dispatch candidate = com.jacob.com.Dispatch.call(items, "Item", i).toDispatch();
+                    String name = safeGetProperty(candidate, "Properties", "Item Name");
+                    String category = getItemString(candidate, 4125); // PID 4125 = Item Category
+                    String nameUpper = name != null ? name.toUpperCase() : "";
+                    String catUpper = category != null ? category.toUpperCase() : "";
+
+                    log.info("WIA: Item {} - Name: '{}', Category: {}", i, name, category);
+
+                    // FEEDER: FE142255 / Document: 6291BD2C
+                    if (useFeeder && (catUpper.contains("FE142255") || catUpper.contains("6291BD2C")
+                            || nameUpper.contains("FEEDER"))) {
+                        item = candidate;
+                        log.info("WIA: Selected Feeder item at index {}", i);
+                        break;
+                    }
+                    // FLATBED: 35402336
+                    if (!useFeeder && (catUpper.contains("35402336") || nameUpper.contains("FLAT")
+                            || nameUpper.contains("BED"))) {
+                        item = candidate;
+                        log.info("WIA: Selected Flatbed item at index {}", i);
+                        break;
                     }
                 }
 
@@ -328,20 +338,19 @@ public class WIAService {
             dumpProperties("Device", device);
             dumpProperties("Item", item);
 
-            // Re-apply document handling flags on the selected child item.
-            // Many drivers (Kyocera, Brother, Canon) require 3088 / 3096 / 3093 to be set
-            // on the feeder sub-item in addition to the device root.
-            if (useFeeder) {
-                log.debug("WIA: Re-applying 3088={} 3096={} 3093={} on Feeder Item", handling, pagesToScan,
-                        pagesToScan);
-                setItemInt(item, 3088, handling);
-                setItemInt(item, 3096, pagesToScan); // WIA_DPS_PAGES (WIA 1.0)
-                setItemInt(item, 3093, pagesToScan); // WIA_IPS_PAGES (WIA 2.0)
-                int irb3088 = getItemInt(item, 3088);
-                int irb3096 = getItemInt(item, 3096);
-                int irb3093 = getItemInt(item, 3093);
-                log.info("WIA: Item property readback → 3088={} 3096={} 3093={}", irb3088, irb3096, irb3093);
-            }
+            // Sync properties to Item (Handling/Pages)
+            // Many WIA 2.0 drivers require item-level source selection.
+            int pidItemHandling = findPropertyIdByName(item, "Document Handling Select", 3088);
+            int pidItemPages = findPropertyIdByName(item, "Pages", 3096);
+            log.debug("WIA: Re-applying Handling={} Pages={} to Item (PIDs: {}, {})", handling, pagesToScan,
+                    pidItemHandling, pidItemPages);
+
+            setItemInt(item, pidItemHandling, handling);
+            setItemInt(item, pidItemPages, pagesToScan);
+
+            int irb3088 = getItemInt(item, pidItemHandling);
+            int irb3096 = getItemInt(item, pidItemPages);
+            log.info("WIA: Item status readback ? Handling={} Pages={}", irb3088, irb3096);
 
             // Apply basic properties to ITEM (Resolution/Intent are Item properties)
             // Use name-based lookup for PIDs because WIA 2.0 drivers (like HP) often shift
@@ -361,22 +370,25 @@ public class WIAService {
             setItemInt(item, pidXRes, dpi);
             setItemInt(item, pidYRes, dpi);
 
-            // AUTO-SCALE EXTENTS: Many drivers return "Incorrect Parameter" if pixels
-            // width/height
-            // don't match resolution * physical size.
+            // AUTO-SCALE EXTENTS
             int physWidthMil = useFeeder ? getItemInt(device, 3076) : getItemInt(device, 3074);
             int physHeightMil = useFeeder ? getItemInt(device, 3077) : getItemInt(device, 3075);
             if (physWidthMil > 0 && physHeightMil > 0) {
                 int pxW = (physWidthMil * dpi) / 1000;
                 int pxH = (physHeightMil * dpi) / 1000;
-                log.info("WIA: Scaling extents to {}x{} (Physical: {}x{} mil)", pxW, pxH, physWidthMil, physHeightMil);
-                setItemInt(item, pidXExt, pxW);
-                setItemInt(item, pidYExt, pxH);
+                // Double-check if this item has extents before setting
+                if (pidXExt > 0 && pidYExt > 0) {
+                    log.info("WIA: Scaling extents to {}x{} (Physical bounds: {}x{} mil)", pxW, pxH, physWidthMil,
+                            physHeightMil);
+                    setItemInt(item, pidXExt, pxW);
+                    setItemInt(item, pidYExt, pxH);
+                }
             }
 
-            // Sync Format property
             String guid = formatGuid(options.format);
-            setItemString(item, pidFormat, guid);
+            if (pidFormat > 0) {
+                setItemString(item, pidFormat, guid);
+            }
 
             List<byte[]> pageDatas = new ArrayList<>();
             boolean hasMorePages = true;
