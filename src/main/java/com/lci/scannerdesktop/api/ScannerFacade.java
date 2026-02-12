@@ -24,27 +24,27 @@ public class ScannerFacade {
     private final WIAService wiaService;
     private final SaneService saneService;
     private final ScanPolicy scanPolicy;
-    
+
     @Value("${scanner.startup-discovery.enabled:true}")
     private boolean startupDiscoveryEnabled;
-    
+
     @Value("${scanner.startup-discovery.delay-seconds:2}")
     private int startupDiscoveryDelaySeconds;
-    
+
     @Value("${scanner.cache.ttl-minutes:2}")
     private int cacheTtlMinutes;
-    
+
     // Simple cache for scanners
     private final Map<String, List<LocalApiController.ScannerDTO>> scannerCache = new ConcurrentHashMap<>();
     private final Map<String, Long> cacheTimestamps = new ConcurrentHashMap<>();
     private long CACHE_TTL_MS;
-    
+
     @PostConstruct
     public void initializeCacheSettings() {
         CACHE_TTL_MS = TimeUnit.MINUTES.toMillis(cacheTtlMinutes);
         System.out.println("[ScannerFacade] Cache TTL configured: " + cacheTtlMinutes + " minutes");
     }
-    
+
     /**
      * Automatically discover scanners when application starts
      */
@@ -54,28 +54,29 @@ public class ScannerFacade {
             System.out.println("[ScannerFacade] Startup discovery disabled by configuration");
             return;
         }
-        
+
         System.out.println("[ScannerFacade] Application ready - starting automatic scanner discovery...");
         System.out.println("[ScannerFacade] Discovery delay: " + startupDiscoveryDelaySeconds + " seconds");
-        
+
         try {
             // Perform initial discovery in background
             new Thread(() -> {
                 try {
                     Thread.sleep(startupDiscoveryDelaySeconds * 1000L); // Wait for services to be ready
                     List<LocalApiController.ScannerDTO> scanners = discoverScannersInternal();
-                    System.out.println("[ScannerFacade] Startup discovery complete: " + scanners.size() + " scanners found");
-                    
+                    System.out.println(
+                            "[ScannerFacade] Startup discovery complete: " + scanners.size() + " scanners found");
+
                     // Cache the results
                     String cacheKey = "all_scanners";
                     scannerCache.put(cacheKey, scanners);
                     cacheTimestamps.put(cacheKey, System.currentTimeMillis());
-                    
+
                 } catch (Exception e) {
                     System.err.println("[ScannerFacade] Startup discovery failed: " + e.getMessage());
                 }
             }, "ScannerStartupDiscovery").start();
-            
+
         } catch (Exception e) {
             System.err.println("[ScannerFacade] Failed to start automatic discovery: " + e.getMessage());
         }
@@ -84,7 +85,7 @@ public class ScannerFacade {
     public List<LocalApiController.ScannerDTO> listScanners() {
         String cacheKey = "all_scanners";
         Long timestamp = cacheTimestamps.get(cacheKey);
-        
+
         // Check if cache is valid
         if (timestamp != null && (System.currentTimeMillis() - timestamp) < CACHE_TTL_MS) {
             List<LocalApiController.ScannerDTO> cached = scannerCache.get(cacheKey);
@@ -93,25 +94,25 @@ public class ScannerFacade {
                 return cached;
             }
         }
-        
+
         // Cache miss or expired - discover fresh
         System.out.println("[ScannerFacade] Cache miss, discovering scanners...");
         List<LocalApiController.ScannerDTO> scanners = discoverScannersInternal();
-        
+
         // Update cache
         scannerCache.put(cacheKey, scanners);
         cacheTimestamps.put(cacheKey, System.currentTimeMillis());
-        
+
         System.out.println("[ScannerFacade] Discovered total: " + scanners.size());
         return scanners;
     }
-    
+
     /**
      * Internal method to discover scanners from all services
      */
     private List<LocalApiController.ScannerDTO> discoverScannersInternal() {
         List<LocalApiController.ScannerDTO> out = new ArrayList<>();
-        
+
         try {
             esclService.discoverScanners().forEach(s -> {
                 LocalApiController.ScannerDTO dto = new LocalApiController.ScannerDTO();
@@ -151,7 +152,7 @@ public class ScannerFacade {
         } catch (Exception e) {
             System.out.println("[ScannerFacade] SANE discovery error: " + e.getMessage());
         }
-        
+
         return out;
     }
 
@@ -182,9 +183,13 @@ public class ScannerFacade {
             // Prefer discovered devicePath if available
             String devicePath = null;
             for (LocalApiController.ScannerDTO s : listScanners()) {
-                if (req.getScannerId().equals(s.getId())) { devicePath = s.getDevicePath(); break; }
+                if (req.getScannerId().equals(s.getId())) {
+                    devicePath = s.getDevicePath();
+                    break;
+                }
             }
-            if (devicePath != null) base = devicePath;
+            if (devicePath != null)
+                base = devicePath;
 
             ESCLService.ScanResult r = esclService.scan(base, opt);
             enforceSize(r);
@@ -207,6 +212,8 @@ public class ScannerFacade {
             opt.outputFileName = req.getOutputFileName();
             opt.duplex = req.getDuplex();
             opt.adf = req.getAdf();
+            opt.maxPages = req.getMaxPages();
+            opt.copies = req.getCopies();
 
             WIAService.ScanResult r = wiaService.scan(opt);
             enforceSize(r);
@@ -248,26 +255,42 @@ public class ScannerFacade {
     private void enforceSize(Object backendResult) {
         try {
             byte[] data = null;
-            if (backendResult instanceof ESCLService.ScanResult) data = ((ESCLService.ScanResult) backendResult).fileData;
-            else if (backendResult instanceof WIAService.ScanResult) data = ((WIAService.ScanResult) backendResult).fileData;
-            else if (backendResult instanceof SaneService.ScanResult) data = ((SaneService.ScanResult) backendResult).fileData;
+            if (backendResult instanceof ESCLService.ScanResult)
+                data = ((ESCLService.ScanResult) backendResult).fileData;
+            else if (backendResult instanceof WIAService.ScanResult)
+                data = ((WIAService.ScanResult) backendResult).fileData;
+            else if (backendResult instanceof SaneService.ScanResult)
+                data = ((SaneService.ScanResult) backendResult).fileData;
             if (data != null && data.length > scanPolicy.getMaxResultSizeBytes()) {
-                if (backendResult instanceof ESCLService.ScanResult) { ((ESCLService.ScanResult) backendResult).status = "ERROR"; ((ESCLService.ScanResult) backendResult).message = "Result too large"; ((ESCLService.ScanResult) backendResult).fileData = null; }
-                if (backendResult instanceof WIAService.ScanResult) { ((WIAService.ScanResult) backendResult).status = "ERROR"; ((WIAService.ScanResult) backendResult).message = "Result too large"; ((WIAService.ScanResult) backendResult).fileData = null; }
-                if (backendResult instanceof SaneService.ScanResult) { ((SaneService.ScanResult) backendResult).status = "ERROR"; ((SaneService.ScanResult) backendResult).message = "Result too large"; ((SaneService.ScanResult) backendResult).fileData = null; }
+                if (backendResult instanceof ESCLService.ScanResult) {
+                    ((ESCLService.ScanResult) backendResult).status = "ERROR";
+                    ((ESCLService.ScanResult) backendResult).message = "Result too large";
+                    ((ESCLService.ScanResult) backendResult).fileData = null;
+                }
+                if (backendResult instanceof WIAService.ScanResult) {
+                    ((WIAService.ScanResult) backendResult).status = "ERROR";
+                    ((WIAService.ScanResult) backendResult).message = "Result too large";
+                    ((WIAService.ScanResult) backendResult).fileData = null;
+                }
+                if (backendResult instanceof SaneService.ScanResult) {
+                    ((SaneService.ScanResult) backendResult).status = "ERROR";
+                    ((SaneService.ScanResult) backendResult).message = "Result too large";
+                    ((SaneService.ScanResult) backendResult).fileData = null;
+                }
             }
-        } catch (Exception ignore) {}
+        } catch (Exception ignore) {
+        }
     }
 
     public LocalApiController.CapabilitiesDTO getCapabilities(String scannerId) {
         String cacheKey = "capabilities_" + scannerId;
         Long timestamp = cacheTimestamps.get(cacheKey);
-        
+
         // Check if capabilities cache is valid (longer TTL)
         if (timestamp != null && (System.currentTimeMillis() - timestamp) < (CACHE_TTL_MS * 2)) {
             // Return cached capabilities if available
         }
-        
+
         LocalApiController.CapabilitiesDTO out = new LocalApiController.CapabilitiesDTO();
         out.setScannerId(scannerId);
         try {
@@ -276,7 +299,10 @@ public class ScannerFacade {
                 String base = "http://" + ip;
                 // prefer cached devicePath from discovery
                 for (LocalApiController.ScannerDTO s : listScanners()) {
-                    if (scannerId.equals(s.getId())) { base = s.getDevicePath(); break; }
+                    if (scannerId.equals(s.getId())) {
+                        base = s.getDevicePath();
+                        break;
+                    }
                 }
                 ESCLService.Capabilities c = esclService.getCapabilities(base);
                 out.setSupportedResolutions(c.supportedResolutions);
@@ -286,21 +312,26 @@ public class ScannerFacade {
                 out.setAdfSupported(c.adfSupported);
                 return out;
             }
-        } catch (Exception ignore) {}
+        } catch (Exception ignore) {
+        }
         // Fallback defaults
-        out.setSupportedResolutions(java.util.Arrays.asList(150,200,300,600));
-        out.setSupportedFormats(java.util.Arrays.asList("pdf","jpg","png","tiff"));
-        out.setSupportedColorModes(java.util.Arrays.asList("Color","Grayscale","Black and White"));
+        out.setSupportedResolutions(java.util.Arrays.asList(150, 200, 300, 600));
+        out.setSupportedFormats(java.util.Arrays.asList("pdf", "jpg", "png", "tiff"));
+        out.setSupportedColorModes(java.util.Arrays.asList("Color", "Grayscale", "Black and White"));
         out.setDuplexSupported(scannerId != null && (scannerId.startsWith("escl_") || scannerId.startsWith("wia_")));
         out.setAdfSupported(true);
         return out;
     }
-    
+
+    public void stopScan() {
+        System.out.println("[ScannerFacade] Stop requested for all backends");
+        wiaService.stopScan();
+        // Add ESCL/SANE stops if they support it later
+    }
+
     public void clearCache() {
         scannerCache.clear();
         cacheTimestamps.clear();
         System.out.println("[ScannerFacade] Cache cleared");
     }
 }
-
-

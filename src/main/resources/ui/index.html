@@ -23,9 +23,7 @@
       --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Roboto', 'Helvetica Neue', Arial, sans-serif;
@@ -35,7 +33,7 @@
       line-height: 1.6;
     }
 
-    /* Header */
+    /* ── Header ── */
     .header {
       background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
       color: white;
@@ -48,10 +46,7 @@
     .header::before {
       content: '';
       position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
+      inset: 0;
       background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/><circle cx="50" cy="10" r="0.5" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
       opacity: 0.3;
     }
@@ -64,16 +59,12 @@
       justify-content: space-between;
     }
 
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
+    .logo { display: flex; align-items: center; gap: 0.75rem; }
 
     .logo-icon {
       width: 2.5rem;
       height: 2.5rem;
-      background: rgba(255, 255, 255, 0.2);
+      background: rgba(255,255,255,0.2);
       border-radius: 0.75rem;
       display: flex;
       align-items: center;
@@ -81,33 +72,22 @@
       font-size: 0.875rem;
       font-weight: 700;
       letter-spacing: 0.05em;
-      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Roboto', sans-serif;
     }
 
-    .logo-text {
-      font-size: 1.5rem;
-      font-weight: 700;
-      margin: 0;
-    }
+    .logo-text    { font-size: 1.5rem;  font-weight: 700; margin: 0; }
+    .logo-subtitle { font-size: 0.875rem; opacity: 0.9; margin: 0; font-weight: 400; }
 
-    .logo-subtitle {
-      font-size: 0.875rem;
-      opacity: 0.9;
-      margin: 0;
-      font-weight: 400;
-    }
-
-    .status-badge {
+    .health-badge {
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      background: rgba(255, 255, 255, 0.2);
+      background: rgba(255,255,255,0.2);
       padding: 0.5rem 1rem;
       border-radius: 2rem;
       font-size: 0.875rem;
     }
 
-    .status-indicator {
+    .status-dot {
       width: 0.5rem;
       height: 0.5rem;
       border-radius: 50%;
@@ -115,19 +95,12 @@
       animation: pulse 2s infinite;
     }
 
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
-    }
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
 
-    /* Container */
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 2rem;
-    }
+    /* ── Layout ── */
+    .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
 
-    /* Cards */
+    /* ── Cards ── */
     .card {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -135,279 +108,212 @@
       margin-bottom: 1.5rem;
       box-shadow: var(--shadow);
       overflow: hidden;
-      transition: all 0.2s ease;
+      transition: box-shadow 0.2s ease;
     }
 
-    .card:hover {
-      box-shadow: var(--shadow-lg);
-    }
+    .card:hover { box-shadow: var(--shadow-lg); }
 
     .card-header {
-      padding: 1.5rem;
+      padding: 1.25rem 1.5rem;
       border-bottom: 1px solid var(--border);
       background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
     }
 
     .card-title {
-      font-size: 1.25rem;
+      font-size: 1.125rem;
       font-weight: 600;
       margin: 0;
       display: flex;
       align-items: center;
       gap: 0.75rem;
+      color: var(--text-primary);
     }
 
-    .card-icon {
-      color: var(--primary-color);
-      font-size: 1.125rem;
-    }
+    .card-icon { color: var(--primary-color); }
+    .card-content { padding: 1.5rem; }
 
-    .card-content {
-      padding: 1.5rem;
-    }
-
-    /* Form Elements */
+    /* ── Form ── */
     .form-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
       gap: 1rem;
       margin-bottom: 1.5rem;
     }
 
-    .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
+    .form-group { display: flex; flex-direction: column; gap: 0.375rem; }
 
     .form-label {
-      font-size: 0.875rem;
-      font-weight: 500;
+      font-size: 0.8125rem;
+      font-weight: 600;
       color: var(--text-secondary);
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: 0.375rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .form-hint {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.125rem;
     }
 
     .form-control {
-      padding: 0.75rem;
+      padding: 0.625rem 0.75rem;
       border: 1px solid var(--border);
       border-radius: 0.5rem;
       font-size: 0.875rem;
-      transition: all 0.2s ease;
+      transition: border-color 0.15s, box-shadow 0.15s;
       background: var(--surface);
+      color: var(--text-primary);
+      width: 100%;
     }
 
     .form-control:focus {
       outline: none;
       border-color: var(--primary-color);
-      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
     }
 
     .form-control:disabled {
       background: #f1f5f9;
       color: var(--text-muted);
+      cursor: not-allowed;
     }
 
-    /* Buttons */
+    /* ── Action bar ── */
+    .action-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: center;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .action-bar-spacer { flex: 1; }
+
+    /* ── Buttons ── */
     .btn {
       display: inline-flex;
       align-items: center;
       gap: 0.5rem;
-      padding: 0.75rem 1.5rem;
+      padding: 0.625rem 1.25rem;
       border: none;
       border-radius: 0.5rem;
       font-size: 0.875rem;
       font-weight: 500;
       cursor: pointer;
-      transition: all 0.2s ease;
-      text-decoration: none;
+      transition: all 0.15s ease;
+      white-space: nowrap;
     }
 
-    .btn-primary {
-      background: var(--primary-color);
-      color: white;
-    }
+    .btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none !important; }
 
-    .btn-primary:hover {
-      background: var(--primary-dark);
-      transform: translateY(-1px);
-    }
+    .btn-secondary { background: var(--secondary-color); color: white; }
+    .btn-secondary:hover:not(:disabled) { background: #475569; }
 
-    .btn-secondary {
-      background: var(--secondary-color);
-      color: white;
-    }
-
-    .btn-secondary:hover {
-      background: #475569;
-    }
-
-    .btn-success {
-      background: var(--success-color);
-      color: white;
-    }
-
-    .btn-success:hover {
-      background: #047857;
-    }
-
-    .btn:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    /* Scanner Controls */
-    .scanner-controls {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1rem;
-      align-items: end;
-      margin-bottom: 1rem;
-    }
-
-    .scan-button {
+    .btn-scan {
       background: linear-gradient(135deg, var(--success-color) 0%, #047857 100%);
       color: white;
-      padding: 1rem 2rem;
-      font-size: 1rem;
+      padding: 0.75rem 1.75rem;
+      font-size: 0.9375rem;
       font-weight: 600;
-      border-radius: 0.75rem;
+      border-radius: 0.625rem;
       box-shadow: var(--shadow);
     }
 
-    .scan-button:hover {
-      transform: translateY(-2px);
+    .btn-scan:hover:not(:disabled) {
+      transform: translateY(-1px);
       box-shadow: var(--shadow-lg);
     }
 
-    .scan-button:disabled {
-      background: var(--text-muted);
-      transform: none;
-      box-shadow: var(--shadow);
-    }
+    .btn-stop { background: var(--error-color); color: white; }
+    .btn-stop:hover:not(:disabled) { background: #b91c1c; }
 
-    /* Jobs Table */
-    .jobs-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 1rem;
-    }
-
-    .jobs-table th {
-      background: #f8fafc;
-      padding: 1rem;
-      text-align: left;
-      font-weight: 600;
-      font-size: 0.875rem;
-      color: var(--text-secondary);
-      border-bottom: 1px solid var(--border);
-    }
-
-    .jobs-table td {
-      padding: 1rem;
-      border-bottom: 1px solid var(--border);
-      font-size: 0.875rem;
-    }
-
-    .jobs-table tr:hover {
-      background: #f8fafc;
-    }
-
-    .status-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.25rem;
-      padding: 0.25rem 0.75rem;
-      border-radius: 1rem;
-      font-size: 0.75rem;
-      font-weight: 500;
-    }
-
-    .status-success {
-      background: #dcfce7;
-      color: #166534;
-    }
-
-    .status-error {
-      background: #fee2e2;
-      color: #991b1b;
-    }
-
-    .status-processing {
-      background: #fef3c7;
-      color: #92400e;
-    }
-
-    /* Loading States */
-    .loading {
-      display: inline-flex;
+    /* ── Inline scan message ── */
+    .scan-message {
+      display: none;
       align-items: center;
       gap: 0.5rem;
+      padding: 0.625rem 1rem;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin-top: 0.75rem;
     }
 
+    .scan-message.success { display: flex; background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+    .scan-message.error   { display: flex; background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+    .scan-message.info    { display: flex; background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+
+    /* ── Loading spinner ── */
     .spinner {
       width: 1rem;
       height: 1rem;
       border: 2px solid transparent;
-      border-top: 2px solid currentColor;
+      border-top-color: currentColor;
       border-radius: 50%;
-      animation: spin 1s linear infinite;
+      animation: spin 0.75s linear infinite;
+      flex-shrink: 0;
     }
 
-    @keyframes spin {
-      to { transform: rotate(360deg); }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Scan History table ── */
+    .jobs-table { width: 100%; border-collapse: collapse; }
+
+    .jobs-table th {
+      background: #f8fafc;
+      padding: 0.75rem 1rem;
+      text-align: left;
+      font-weight: 600;
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+      border-bottom: 2px solid var(--border);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
     }
 
-    /* Responsive */
-    @media (max-width: 768px) {
-      .container {
-        padding: 1rem;
-      }
-      
-      .header {
-        padding: 1rem;
-      }
-      
-      .form-grid {
-        grid-template-columns: 1fr;
-      }
-      
-      .scanner-controls {
-        flex-direction: column;
-        align-items: stretch;
-      }
-      
+    .jobs-table td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.875rem;
+      vertical-align: middle;
     }
 
-    /* Footer link hover effects */
-    footer a:hover {
-      color: var(--primary-dark) !important;
-      transform: translateY(-2px);
-      border-color: var(--primary-dark) !important;
-      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    .jobs-table tbody tr:hover { background: #f8fafc; }
+    .jobs-table tbody tr:last-child td { border-bottom: none; }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 1rem;
+      font-size: 0.75rem;
+      font-weight: 600;
     }
 
-    /* Empty State */
+    .badge-success { background: #dcfce7; color: #166534; }
+    .badge-error   { background: #fee2e2; color: #991b1b; }
+
+    /* ── Empty state ── */
     .empty-state {
       text-align: center;
       padding: 3rem 1rem;
       color: var(--text-muted);
     }
 
-    .empty-state i {
-      font-size: 3rem;
-      margin-bottom: 1rem;
-      opacity: 0.5;
-    }
+    .empty-state i { font-size: 2.5rem; margin-bottom: 0.75rem; display: block; opacity: 0.4; }
 
-    /* Tips */
+    /* ── Tips ── */
     .tips {
       background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
       border: 1px solid #bae6fd;
       border-radius: 0.75rem;
-      padding: 1rem;
+      padding: 1rem 1.25rem;
       margin-top: 1rem;
     }
 
@@ -418,67 +324,128 @@
       display: flex;
       align-items: center;
       gap: 0.5rem;
+      font-size: 0.875rem;
     }
 
     .tips-list {
       margin: 0;
-      padding-left: 1.5rem;
+      padding-left: 1.25rem;
       color: #0c4a6e;
+      font-size: 0.875rem;
     }
 
-    .tips-list li {
-      margin-bottom: 0.25rem;
+    .tips-list li { margin-bottom: 0.2rem; }
+    .tips-list li:last-child { margin-bottom: 0; }
+
+    /* ── Footer ── */
+    footer {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 2rem;
+      margin-top: 2rem;
+      text-align: center;
+      color: var(--text-secondary);
+    }
+
+    footer h3 { margin: 0; color: var(--text-primary); font-size: 1.125rem; font-weight: 600; }
+    footer p  { margin: 0.375rem 0 0; font-size: 0.875rem; }
+
+    .footer-inner { max-width: 1200px; margin: 0 auto; }
+
+    .footer-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--primary-color);
+      text-decoration: none;
+      font-size: 0.9375rem;
+      font-weight: 500;
+      padding: 0.6rem 1.25rem;
+      border: 2px solid var(--primary-color);
+      border-radius: 0.625rem;
+      margin-top: 1rem;
+      transition: all 0.2s ease;
+    }
+
+    .footer-link:hover {
+      color: var(--primary-dark);
+      border-color: var(--primary-dark);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(37,99,235,0.25);
+    }
+
+    .footer-copy { font-size: 0.75rem; color: var(--text-muted); margin-top: 1rem; }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      .container { padding: 1rem; }
+      .header    { padding: 1rem; }
+      .form-grid { grid-template-columns: 1fr 1fr; }
+      .action-bar { flex-direction: column; align-items: stretch; }
+      .action-bar-spacer { display: none; }
+      .btn-scan  { justify-content: center; }
+    }
+
+    @media (max-width: 480px) {
+      .form-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
+
   <header class="header">
     <div class="header-content">
       <div class="logo">
-        <div class="logo-icon">
-          PSC
-        </div>
+        <div class="logo-icon">PSC</div>
         <div>
           <h1 class="logo-text">Pascal Scanning Client</h1>
           <p class="logo-subtitle">Professional Document Scanning Solution</p>
         </div>
       </div>
-      <div class="status-badge">
-        <div class="status-indicator" id="statusIndicator"></div>
-        <span id="health">Checking...</span>
+      <div class="health-badge">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="healthText">Checking…</span>
       </div>
     </div>
   </header>
 
   <div class="container">
-    <!-- Scanner Configuration -->
+
+    <!-- ── Scanner Configuration ── -->
     <div class="card">
       <div class="card-header">
         <h2 class="card-title">
-          <i class="fas fa-cog card-icon"></i>
+          <i class="fas fa-sliders-h card-icon"></i>
           Scanner Configuration
         </h2>
       </div>
       <div class="card-content">
+
         <div class="form-grid">
-          <div class="form-group">
+
+          <!-- Scanner device -->
+          <div class="form-group" style="grid-column: span 2;">
             <label class="form-label" for="scanner">
-              <i class="fas fa-scanner"></i>
+              <i class="fas fa-print"></i>
               Scanner
             </label>
             <select id="scanner" class="form-control" onchange="loadCaps()">
-              <option value="">Loading scanners...</option>
+              <option value="">Loading scanners…</option>
             </select>
           </div>
+
+          <!-- Resolution -->
           <div class="form-group">
             <label class="form-label" for="dpi">
-              <i class="fas fa-expand-arrows-alt"></i>
-              Resolution (DPI)
+              <i class="fas fa-search-plus"></i>
+              Resolution
             </label>
             <select id="dpi" class="form-control">
               <option value="300">300 DPI</option>
             </select>
           </div>
+
+          <!-- Color mode -->
           <div class="form-group">
             <label class="form-label" for="color">
               <i class="fas fa-palette"></i>
@@ -488,198 +455,213 @@
               <option value="Color">Color</option>
             </select>
           </div>
+
+          <!-- Output format -->
           <div class="form-group">
             <label class="form-label" for="format">
-              <i class="fas fa-file"></i>
+              <i class="fas fa-file-alt"></i>
               Output Format
             </label>
             <select id="format" class="form-control">
               <option value="pdf">PDF</option>
             </select>
           </div>
+
+          <!-- Paper size -->
+          <div class="form-group">
+            <label class="form-label" for="paperSize">
+              <i class="fas fa-file"></i>
+              Paper Size
+            </label>
+            <select id="paperSize" class="form-control">
+              <option value="A4">A4</option>
+              <option value="Letter">Letter</option>
+              <option value="Legal">Legal</option>
+              <option value="A3">A3</option>
+            </select>
+          </div>
+
+          <!-- Scan source (replaces duplex + ADF checkboxes) -->
+          <div class="form-group">
+            <label class="form-label" for="source">
+              <i class="fas fa-layer-group"></i>
+              Scan Source
+            </label>
+            <select id="source" class="form-control" onchange="onSourceChange()">
+              <option value="flatbed">Flatbed</option>
+              <option value="adf">ADF — Single Sided</option>
+              <option value="duplex">ADF — Both Sides</option>
+            </select>
+          </div>
+
+          <!-- Page limit -->
+          <div class="form-group" id="maxPagesGroup">
+            <label class="form-label" for="maxPages">
+              <i class="fas fa-list-ol"></i>
+              Page Limit
+            </label>
+            <input type="number" id="maxPages" class="form-control" value="0" min="0" />
+            <span class="form-hint" id="maxPagesHint">0 = scan all sheets from feeder</span>
+          </div>
+
+          <!-- Copies -->
+          <div class="form-group">
+            <label class="form-label" for="copies">
+              <i class="fas fa-copy"></i>
+              Copies
+            </label>
+            <input type="number" id="copies" class="form-control" value="1" min="1" />
+          </div>
+
+          <!-- Output filename -->
           <div class="form-group">
             <label class="form-label" for="filename">
               <i class="fas fa-tag"></i>
               Filename
             </label>
-            <input type="text" id="filename" class="form-control" placeholder="scan_document" />
+            <input type="text" id="filename" class="form-control" placeholder="pascal_scan" />
           </div>
+
         </div>
 
-        <div class="scanner-controls">
-          <div class="form-group">
-            <label class="form-label">
-              <input type="checkbox" id="duplex" style="margin-right: 0.5rem;" />
-              <i class="fas fa-copy"></i>
-              Duplex Scanning
-            </label>
-          </div>
-          <div class="form-group">
-            <label class="form-label">
-              <input type="checkbox" id="adf" style="margin-right: 0.5rem;" />
-              <i class="fas fa-layer-group"></i>
-              Auto Document Feeder
-            </label>
-          </div>
-          <button class="btn btn-secondary" onclick="populateScanners()">
-            <i class="fas fa-sync-alt"></i>
+        <!-- ── Action bar ── -->
+        <div class="action-bar">
+          <button class="btn btn-secondary" id="refreshBtn" onclick="refreshScanners()">
+            <i class="fas fa-sync-alt" id="refreshIcon"></i>
             Refresh Scanners
           </button>
-          <button id="scanBtn" class="btn scan-button" onclick="doScan()">
+
+          <div class="action-bar-spacer"></div>
+
+          <button id="stopBtn" class="btn btn-stop" style="display:none;" onclick="stopScan()">
+            <i class="fas fa-stop"></i>
+            Stop
+          </button>
+
+          <button id="scanBtn" class="btn btn-scan" onclick="doScan()">
             <i class="fas fa-play" id="scanIcon"></i>
             <span id="scanText">Start Scan</span>
-            <div class="loading" id="scanLoading" style="display: none;">
-              <div class="spinner"></div>
-              <span>Scanning...</span>
-            </div>
+            <span id="scanSpinner" style="display:none;display:none;" class="spinner"></span>
           </button>
         </div>
 
+        <!-- ── Inline feedback ── -->
+        <div id="scanMessage" class="scan-message"></div>
+
+        <!-- ── Tips ── -->
         <div class="tips">
           <div class="tips-title">
-            <i class="fas fa-lightbulb"></i>
-            Scanning Tips
+            <i class="fas fa-circle-info"></i>
+            Tips
           </div>
           <ul class="tips-list">
-            <li>Use 300 DPI for standard documents, 600 DPI for detailed graphics</li>
-            <li>Enable Duplex for double-sided scanning</li>
-            <li>Use ADF for batch scanning multiple pages</li>
-            <li>PDF format is recommended for document archiving</li>
+            <li><strong>Flatbed</strong> — place a single sheet on the glass; ideal for photos and bound documents.</li>
+            <li><strong>ADF Single Sided</strong> — feeds a stack of pages through the feeder, scanning one side of each.</li>
+            <li><strong>ADF Both Sides</strong> — requires a physical duplexer in the scanner; scans front and back of each sheet automatically.</li>
+            <li>Use <strong>300 DPI</strong> for standard documents; <strong>600 DPI</strong> for photos or fine print.</li>
+            <li>Set <strong>Page Limit to 0</strong> when scanning a full ADF stack of unknown length.</li>
           </ul>
         </div>
+
       </div>
     </div>
 
-    <!-- Scan Jobs -->
+    <!-- ── Scan History ── -->
     <div class="card">
       <div class="card-header">
         <h2 class="card-title">
-          <i class="fas fa-history card-icon"></i>
+          <i class="fas fa-clock-rotate-left card-icon"></i>
           Scan History
         </h2>
       </div>
-      <div class="card-content">
+      <div class="card-content" style="padding: 0;">
         <table class="jobs-table">
           <thead>
             <tr>
               <th><i class="fas fa-clock"></i> Time</th>
-              <th><i class="fas fa-info-circle"></i> Status</th>
-              <th><i class="fas fa-file"></i> File Name</th>
-              <th><i class="fas fa-weight"></i> Size</th>
+              <th>Status</th>
+              <th><i class="fas fa-file"></i> File</th>
+              <th>Size</th>
             </tr>
           </thead>
           <tbody id="jobs">
-            <tr>
-              <td colspan="4" class="empty-state">
-                <i class="fas fa-inbox"></i>
-                <div>No scans yet. Start scanning to see your documents here.</div>
+            <tr id="emptyRow">
+              <td colspan="4">
+                <div class="empty-state">
+                  <i class="fas fa-inbox"></i>
+                  No scans yet — start scanning to see your documents here.
+                </div>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
     </div>
+
   </div>
 
-  <!-- Footer -->
-  <footer style="background: var(--surface); border-top: 1px solid var(--border); padding: 2rem; margin-top: 2rem; text-align: center; color: var(--text-secondary);">
-    <div style="max-width: 1200px; margin: 0 auto;">
-      <div style="margin-bottom: 1rem;">
-        <h3 style="margin: 0; color: var(--text-primary); font-size: 1.125rem; font-weight: 600;">Pascal Scanning Client</h3>
-        <p style="margin: 0.5rem 0 0 0; font-size: 0.875rem;">Professional Document Scanning Solution</p>
-      </div>
-      <div style="display: flex; justify-content: center; margin-bottom: 1rem;">
-        <a href="https://www.linkedin.com/in/pascal-gihozo-a37061178/" target="_blank" style="display: flex; align-items: center; gap: 0.5rem; color: var(--primary-color); text-decoration: none; font-size: 1rem; font-weight: 500; transition: all 0.2s ease; padding: 0.75rem 1.5rem; border: 2px solid var(--primary-color); border-radius: 0.75rem;">
-          <i class="fab fa-linkedin" style="font-size: 1.125rem;"></i>
+  <!-- ── Footer ── -->
+  <footer>
+    <div class="footer-inner">
+      <h3>Pascal Scanning Client</h3>
+      <p>Professional Document Scanning Solution</p>
+      <div>
+        <a class="footer-link" href="https://www.linkedin.com/in/pascal-gihozo-a37061178/" target="_blank">
+          <i class="fab fa-linkedin"></i>
           LinkedIn
         </a>
       </div>
-      <div style="font-size: 0.75rem; color: var(--text-muted);">
-        <p style="margin: 0;">© 2025 Pascal Gihozo. All rights reserved.</p>
-        <p style="margin: 0.25rem 0 0 0;">Built with Spring Boot & Modern Web Technologies</p>
-      </div>
+      <p class="footer-copy">© 2025 Pascal Gihozo. All rights reserved. · Built with Spring Boot &amp; Modern Web Technologies</p>
     </div>
   </footer>
 
   <script>
+    /* ── API wrapper ── */
     const api = {
-      async health() {
-        console.log('[Pascal UI] GET /v1/health');
-        const r = await fetch('/v1/health');
-        const j = await r.json();
-        console.log('[Pascal UI] health ->', j);
-        return j;
-      },
-      async scanners() {
-        console.log('[Pascal UI] GET /v1/scanners');
-        const r = await fetch('/v1/scanners');
-        const j = await r.json();
-        console.log('[Pascal UI] scanners ->', j);
-        return j;
-      },
-      async caps(id) {
-        console.log('[Pascal UI] GET /v1/capabilities', id);
-        const r = await fetch('/v1/capabilities?scannerId=' + encodeURIComponent(id));
-        const j = await r.json();
-        console.log('[Pascal UI] caps ->', j);
-        return j;
-      },
-      async scan(body) {
-        console.log('[Pascal UI] POST /v1/scan', body);
-        const r = await fetch('/v1/scan', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body)
-        });
-        const j = await r.json();
-        console.log('[Pascal UI] scan ->', j);
-        return j;
-      },
-      async refresh() {
-        console.log('[Pascal UI] POST /v1/refresh');
-        const r = await fetch('/v1/refresh', { method: 'POST' });
-        const j = await r.json();
-        console.log('[Pascal UI] refresh ->', j);
-        return j;
-      }
+      async health()  { return fetchJson('/v1/health'); },
+      async scanners(){ return fetchJson('/v1/scanners'); },
+      async caps(id)  { return fetchJson('/v1/capabilities?scannerId=' + encodeURIComponent(id)); },
+      async scan(body){ return fetchJson('/v1/scan', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) }); },
+      async stop()    { return fetchJson('/v1/scan/stop', { method:'POST' }); },
+      async refresh() { return fetchJson('/v1/refresh',  { method:'POST' }); }
     };
 
+    async function fetchJson(url, opts) {
+      const r = await fetch(url, opts);
+      return r.json();
+    }
+
+    /* ── Init ── */
     async function init() {
       try {
         const h = await api.health();
-        const statusEl = document.getElementById('health');
-        const indicatorEl = document.getElementById('statusIndicator');
-        
         if (h && h.status === 'UP') {
-          statusEl.textContent = `Online • v${h.version || '1.0.0'}`;
-          indicatorEl.style.background = 'var(--success-color)';
+          document.getElementById('healthText').textContent = 'Online \u2022 v' + (h.version || '1.0.0');
+          document.getElementById('statusDot').style.background = 'var(--success-color)';
         } else {
-          statusEl.textContent = 'Offline';
-          indicatorEl.style.background = 'var(--error-color)';
+          setOffline();
         }
-      } catch (e) {
-        document.getElementById('health').textContent = 'Connection Failed';
-        document.getElementById('statusIndicator').style.background = 'var(--error-color)';
-      }
-
+      } catch { setOffline(); }
       await populateScanners();
     }
 
+    function setOffline() {
+      document.getElementById('healthText').textContent = 'Offline';
+      document.getElementById('statusDot').style.background = 'var(--error-color)';
+    }
+
+    /* ── Scanner list ── */
     async function populateScanners() {
       const sel = document.getElementById('scanner');
-      sel.innerHTML = '<option value="">Loading scanners...</option>';
+      sel.innerHTML = '<option value="">Loading scanners…</option>';
       sel.disabled = true;
-
       try {
         const list = await api.scanners();
         sel.innerHTML = '';
-
         if (!list || !list.length) {
-          sel.innerHTML = '<option value="">No scanners available</option>';
-          sel.disabled = true;
+          sel.innerHTML = '<option value="">No scanners found</option>';
           return;
         }
-
         sel.disabled = false;
         list.forEach((s, i) => {
           const o = document.createElement('option');
@@ -688,181 +670,221 @@
           sel.appendChild(o);
           if (i === 0) sel.value = s.id;
         });
-
         await loadCaps();
-      } catch (e) {
+      } catch {
         sel.innerHTML = '<option value="">Error loading scanners</option>';
-        sel.disabled = true;
-        console.error('Failed to load scanners:', e);
       }
     }
 
+    async function refreshScanners() {
+      const btn  = document.getElementById('refreshBtn');
+      const icon = document.getElementById('refreshIcon');
+      btn.disabled = true;
+      icon.className = 'fas fa-spinner fa-spin';
+      try {
+        await api.refresh();
+        await populateScanners();
+      } catch { /* ignore */ } finally {
+        btn.disabled = false;
+        icon.className = 'fas fa-sync-alt';
+      }
+    }
+
+    /* ── Capabilities → populate selects ── */
     async function loadCaps() {
       const id = document.getElementById('scanner').value;
       if (!id) return;
-
       try {
         const caps = await api.caps(id);
+        populateSelect('dpi',   (caps.supportedResolutions || [150,200,300,600]).map(r => ({ v: r,  t: r + ' DPI' })),  '300');
+        populateSelect('color', (caps.supportedColorModes  || ['Color','Grayscale','Black and White']).map(m => ({ v: prettyColor(m), t: prettyColor(m) })), 'Color');
+        populateSelect('format',(caps.supportedFormats     || ['pdf','jpg','png','tiff']).map(f => ({ v: f, t: f.toUpperCase() })), 'pdf');
 
-        // DPI
-        const dpiSel = document.getElementById('dpi');
-        dpiSel.innerHTML = '';
-        const resolutions = caps.supportedResolutions && caps.supportedResolutions.length 
-          ? caps.supportedResolutions 
-          : [150, 200, 300, 600];
-        
-        resolutions.forEach(r => {
-          const o = document.createElement('option');
-          o.textContent = `${r} DPI`;
-          o.value = r;
-          dpiSel.appendChild(o);
-        });
-        if ([...dpiSel.options].some(o => o.value === '300')) dpiSel.value = '300';
+        // Source options depend on ADF/duplex capability
+        const srcSel = document.getElementById('source');
+        const current = srcSel.value;
+        srcSel.innerHTML = '';
+        addOption(srcSel, 'flatbed', 'Flatbed');
+        if (caps.adfSupported !== false)    addOption(srcSel, 'adf',    'ADF \u2014 Single Sided');
+        if (caps.duplexSupported !== false) addOption(srcSel, 'duplex', 'ADF \u2014 Both Sides');
+        // Restore previous selection if still valid
+        if ([...srcSel.options].some(o => o.value === current)) srcSel.value = current;
+        onSourceChange();
+      } catch { /* fallback: leave defaults */ }
+    }
 
-        // Color
-        const colorSel = document.getElementById('color');
-        colorSel.innerHTML = '';
-        const colorModes = caps.supportedColorModes && caps.supportedColorModes.length 
-          ? caps.supportedColorModes 
-          : ['Color', 'Grayscale', 'Black and White'];
-        
-        colorModes.forEach(m => {
-          const o = document.createElement('option');
-          o.textContent = prettyColor(m);
-          o.value = prettyColor(m);
-          colorSel.appendChild(o);
-        });
+    function populateSelect(id, items, preferredValue) {
+      const sel = document.getElementById(id);
+      sel.innerHTML = '';
+      items.forEach(({ v, t }) => addOption(sel, v, t));
+      if ([...sel.options].some(o => o.value === String(preferredValue))) sel.value = preferredValue;
+    }
 
-        // Format
-        const fmtSel = document.getElementById('format');
-        fmtSel.innerHTML = '';
-        const formats = caps.supportedFormats && caps.supportedFormats.length 
-          ? caps.supportedFormats 
-          : ['pdf', 'jpg', 'png', 'tiff'];
-        
-        formats.forEach(f => {
-          const o = document.createElement('option');
-          o.textContent = f.toUpperCase();
-          o.value = f;
-          fmtSel.appendChild(o);
-        });
-        if ([...fmtSel.options].some(o => o.value === 'pdf')) fmtSel.value = 'pdf';
+    function addOption(sel, value, text) {
+      const o = document.createElement('option');
+      o.value = value;
+      o.textContent = text;
+      sel.appendChild(o);
+    }
 
-        // Duplex/ADF
-        document.getElementById('duplex').disabled = caps && caps.duplexSupported === false;
-        document.getElementById('adf').disabled = caps && caps.adfSupported === false;
+    /* ── Source select side-effects ── */
+    function onSourceChange() {
+      const source      = document.getElementById('source').value;
+      const maxPagesIn  = document.getElementById('maxPages');
+      const maxPagesHint= document.getElementById('maxPagesHint');
 
-      } catch (e) {
-        console.warn('loadCaps failed', e);
+      if (source === 'flatbed') {
+        // Flatbed always produces exactly 1 page — the field is meaningless
+        maxPagesIn.value    = '1';
+        maxPagesIn.disabled = true;
+        maxPagesHint.textContent = 'Flatbed scans one page per session';
+      } else if (source === 'duplex') {
+        maxPagesIn.disabled = false;
+        if (maxPagesIn.value === '1') maxPagesIn.value = '0'; // un-fix from previous flatbed
+        maxPagesHint.textContent = '0 = scan all sheets; each physical sheet produces 2 pages (front + back)';
+      } else {
+        // adf
+        maxPagesIn.disabled = false;
+        if (maxPagesIn.value === '1') maxPagesIn.value = '0';
+        maxPagesHint.textContent = '0 = scan all sheets from feeder';
       }
     }
 
-    function prettyColor(m) {
-      m = ('' + m).toLowerCase();
-      if (m.includes('gray')) return 'Grayscale';
-      if (m.includes('black')) return 'Black and White';
-      return 'Color';
-    }
-
+    /* ── Scan ── */
     async function doScan() {
+      const scannerId = document.getElementById('scanner').value;
+      if (!scannerId) { showMessage('error', 'Please select a scanner.'); return; }
+
+      const source = document.getElementById('source').value;
       const body = {
-        scannerId: document.getElementById('scanner').value,
-        dpi: parseInt(document.getElementById('dpi').value, 10),
-        colorMode: document.getElementById('color').value,
-        format: document.getElementById('format').value,
-        duplex: document.getElementById('duplex').checked,
-        adf: document.getElementById('adf').checked,
-        outputFileName: document.getElementById('filename').value || 'pascal_scan'
+        scannerId,
+        dpi:            parseInt(document.getElementById('dpi').value, 10),
+        colorMode:      document.getElementById('color').value,
+        format:         document.getElementById('format').value,
+        paperSize:      document.getElementById('paperSize').value,
+        adf:            source === 'adf' || source === 'duplex',
+        duplex:         source === 'duplex',
+        maxPages:       source === 'flatbed' ? 1 : (parseInt(document.getElementById('maxPages').value, 10) || 0),
+        copies:         parseInt(document.getElementById('copies').value, 10) || 1,
+        outputFileName: document.getElementById('filename').value.trim() || 'pascal_scan'
       };
 
       setBusy(true);
+      clearMessage();
       try {
         const res = await api.scan(body);
         if (res && res.status === 'SUCCESS' && res.fileData) {
-          // Create a blob and offer download
-          const byteChars = atob(res.fileData);
-          const byteNums = new Array(byteChars.length);
-          for (let i = 0; i < byteChars.length; i++) {
-            byteNums[i] = byteChars.charCodeAt(i);
-          }
-          const blob = new Blob([new Uint8Array(byteNums)], { type: mime(res.fileFormat) });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = res.fileName || ('pascal_scan.' + (res.fileFormat || 'pdf'));
-          a.click();
-          URL.revokeObjectURL(url);
+          const blob = b64ToBlob(res.fileData, mime(res.fileFormat));
+          triggerDownload(blob, res.fileName || ('pascal_scan.' + (res.fileFormat || 'pdf')));
           addJobRow('SUCCESS', res.fileName, blob.size);
+          showMessage('success', '\u2713 Scan complete — ' + res.fileName);
         } else {
-          addJobRow('ERROR', (res && res.message) ? res.message : 'Failed', 0);
-          alert('Scan failed: ' + (res && res.message ? res.message : 'Unknown error'));
+          const msg = (res && res.message) ? res.message : 'Unknown error';
+          addJobRow('ERROR', msg, 0);
+          showMessage('error', '\u26a0 Scan failed: ' + msg);
         }
       } catch (e) {
         addJobRow('ERROR', e.message || 'Error', 0);
-        alert('Scan error: ' + (e.message || e));
+        showMessage('error', '\u26a0 ' + (e.message || 'Request failed'));
       } finally {
         setBusy(false);
       }
     }
 
+    /* ── Stop ── */
+    async function stopScan() {
+      document.getElementById('stopBtn').disabled = true;
+      try { await api.stop(); } catch { /* ignore */ }
+    }
+
+    /* ── Busy state ── */
+    function setBusy(b) {
+      const scanBtn    = document.getElementById('scanBtn');
+      const stopBtn    = document.getElementById('stopBtn');
+      const scanIcon   = document.getElementById('scanIcon');
+      const scanText   = document.getElementById('scanText');
+      const scanSpinner= document.getElementById('scanSpinner');
+
+      scanBtn.disabled = b;
+      scanIcon.style.display   = b ? 'none' : '';
+      scanText.textContent     = b ? 'Scanning…' : 'Start Scan';
+      scanSpinner.style.display= b ? 'inline-block' : 'none';
+      stopBtn.style.display    = b ? 'inline-flex' : 'none';
+      stopBtn.disabled         = false;
+    }
+
+    /* ── Inline message ── */
+    function showMessage(type, text) {
+      const el = document.getElementById('scanMessage');
+      el.className = 'scan-message ' + type;
+      el.textContent = text;
+    }
+
+    function clearMessage() {
+      const el = document.getElementById('scanMessage');
+      el.className = 'scan-message';
+      el.textContent = '';
+    }
+
+    /* ── History ── */
+    function addJobRow(status, name, size) {
+      const tbody = document.getElementById('jobs');
+      const emptyRow = document.getElementById('emptyRow');
+      if (emptyRow) emptyRow.remove();
+
+      const tr = document.createElement('tr');
+      const badgeCls = status === 'SUCCESS' ? 'badge-success' : 'badge-error';
+      tr.innerHTML =
+        '<td>' + new Date().toLocaleTimeString() + '</td>' +
+        '<td><span class="badge ' + badgeCls + '">' + status + '</span></td>' +
+        '<td>' + (name || '') + '</td>' +
+        '<td>' + (size ? formatBytes(size) : '') + '</td>';
+      tbody.prepend(tr);
+    }
+
+    /* ── Helpers ── */
+    function prettyColor(m) {
+      m = ('' + m).toLowerCase();
+      if (m.includes('gray'))  return 'Grayscale';
+      if (m.includes('black')) return 'Black and White';
+      return 'Color';
+    }
+
     function mime(fmt) {
       fmt = ('' + fmt).toLowerCase();
-      if (fmt === 'pdf') return 'application/pdf';
-      if (fmt === 'png') return 'image/png';
+      if (fmt === 'pdf')              return 'application/pdf';
+      if (fmt === 'png')              return 'image/png';
       if (fmt === 'jpg' || fmt === 'jpeg') return 'image/jpeg';
       if (fmt === 'tiff' || fmt === 'tif') return 'image/tiff';
       return 'application/octet-stream';
     }
 
-    function setBusy(b) {
-      const btn = document.getElementById('scanBtn');
-      const icon = document.getElementById('scanIcon');
-      const text = document.getElementById('scanText');
-      const loading = document.getElementById('scanLoading');
-
-      btn.disabled = b;
-      if (b) {
-        icon.style.display = 'none';
-        text.style.display = 'none';
-        loading.style.display = 'inline-flex';
-      } else {
-        icon.style.display = 'inline';
-        text.style.display = 'inline';
-        loading.style.display = 'none';
-      }
+    function b64ToBlob(b64, type) {
+      const bytes = atob(b64);
+      const buf   = new Uint8Array(bytes.length);
+      for (let i = 0; i < bytes.length; i++) buf[i] = bytes.charCodeAt(i);
+      return new Blob([buf], { type });
     }
 
-    function addJobRow(status, name, size) {
-      const tbody = document.getElementById('jobs');
-      
-      // Remove empty state if it exists
-      const emptyRow = tbody.querySelector('.empty-state');
-      if (emptyRow) {
-        emptyRow.remove();
-      }
-
-      const tr = document.createElement('tr');
-      const statusClass = status === 'SUCCESS' ? 'status-success' : 
-                         status === 'ERROR' ? 'status-error' : 'status-processing';
-      
-      tr.innerHTML = `
-        <td>${new Date().toLocaleTimeString()}</td>
-        <td><span class="status-badge ${statusClass}">${status}</span></td>
-        <td>${name || ''}</td>
-        <td class="muted">${size ? formatBytes(size) : ''}</td>
-      `;
-      tbody.prepend(tr);
+    function triggerDownload(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a   = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
     }
 
     function formatBytes(b) {
       if (!b) return '0 B';
-      const u = ['B', 'KB', 'MB', 'GB'];
+      const u = ['B','KB','MB','GB'];
       const i = Math.floor(Math.log(b) / Math.log(1024));
       return (b / Math.pow(1024, i)).toFixed(2) + ' ' + u[i];
     }
 
-    // Initialize on load
-    document.addEventListener('DOMContentLoaded', init);
+    /* ── Duplex/ADF are now encoded in the Source select — no checkbox sync needed ── */
+
+    document.addEventListener('DOMContentLoaded', () => { init(); onSourceChange(); });
   </script>
 </body>
 </html>
