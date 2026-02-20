@@ -1,7 +1,5 @@
 package com.lci.scannerdesktop.escl;
 
-import com.itextpdf.text.Document;
-import com.itextpdf.text.pdf.PdfWriter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -289,7 +287,7 @@ public class ESCLService {
             String fmt = (options.format == null ? "pdf" : options.format.toLowerCase());
             byte[] finalBytes = null;
             if ("pdf".equals(fmt)) {
-                finalBytes = toPdf(pageDatas);
+                finalBytes = toPdf(pageDatas, options.paperSize);
             } else {
                 finalBytes = pageDatas.get(0);
             }
@@ -315,6 +313,37 @@ public class ESCLService {
         int dpi = o.dpi == null ? 300 : o.dpi;
         String color = mapColor(o.colorMode);
         String mime = mapMime(o.format);
+
+        // Paper Dimensions in Mils (1/1000 inch) -> converted to pixels for eSCL
+        int wMil = 8270; // A4 Default
+        int hMil = 11690;
+
+        if (o.paperSize != null) {
+            switch (o.paperSize.toUpperCase()) {
+                case "LETTER":
+                    wMil = 8500;
+                    hMil = 11000;
+                    break;
+                case "LEGAL":
+                    wMil = 8500;
+                    hMil = 14000;
+                    break;
+                case "A3":
+                    wMil = 11690;
+                    hMil = 16540;
+                    break;
+                case "A4":
+                default:
+                    wMil = 8270;
+                    hMil = 11690;
+                    break;
+            }
+        }
+
+        // eSCL often expects dimensions in pixels @ Resolution
+        int wPx = (wMil * dpi) / 1000;
+        int hPx = (hMil * dpi) / 1000;
+
         return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
                 "<scan:ScanSettings xmlns:scan=\"http://schemas.hp.com/imaging/escl/2011/05/03\" xmlns:pwg=\"http://www.pwg.org/schemas/2010/12/sm\">\n"
                 +
@@ -325,6 +354,10 @@ public class ESCLService {
                 "  <scan:YResolution>" + dpi + "</scan:YResolution>\n" +
                 "  <scan:ColorMode>" + color + "</scan:ColorMode>\n" +
                 "  <scan:InputSource>" + (Boolean.TRUE.equals(o.adf) ? "Feeder" : "Platen") + "</scan:InputSource>\n" +
+                "  <scan:Height>" + hPx + "</scan:Height>\n" +
+                "  <scan:Width>" + wPx + "</scan:Width>\n" +
+                "  <scan:Deskew>true</scan:Deskew>\n" +
+                "  <scan:AutoCrop>true</scan:AutoCrop>\n" +
                 "</scan:ScanSettings>";
     }
 
@@ -365,12 +398,29 @@ public class ESCLService {
         }
     }
 
-    private byte[] toPdf(List<byte[]> allPageBytes) {
+    private byte[] toPdf(List<byte[]> allPageBytes, String paperSize) {
         if (allPageBytes == null || allPageBytes.isEmpty())
             return null;
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-            Document doc = new Document();
-            PdfWriter.getInstance(doc, out);
+            com.itextpdf.text.Rectangle pageSize = com.itextpdf.text.PageSize.A4;
+            if (paperSize != null) {
+                switch (paperSize.toUpperCase()) {
+                    case "LETTER":
+                        pageSize = com.itextpdf.text.PageSize.LETTER;
+                        break;
+                    case "LEGAL":
+                        pageSize = com.itextpdf.text.PageSize.LEGAL;
+                        break;
+                    case "A3":
+                        pageSize = com.itextpdf.text.PageSize.A3;
+                        break;
+                    case "A4":
+                        pageSize = com.itextpdf.text.PageSize.A4;
+                        break;
+                }
+            }
+            com.itextpdf.text.Document doc = new com.itextpdf.text.Document(pageSize, 0, 0, 0, 0);
+            com.itextpdf.text.pdf.PdfWriter.getInstance(doc, out);
             doc.open();
 
             for (byte[] imageData : allPageBytes) {

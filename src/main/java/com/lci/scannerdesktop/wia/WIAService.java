@@ -360,11 +360,15 @@ public class WIAService {
             int pidYRes = findPropertyIdByName(item, "Vertical Resolution", 6147);
             int pidXExt = findPropertyIdByName(item, "Horizontal Extent", 6151);
             int pidYExt = findPropertyIdByName(item, "Vertical Extent", 6152);
+            int pidXPos = findPropertyIdByName(item, "Horizontal Start Position", 6148);
+            int pidYPos = findPropertyIdByName(item, "Vertical Start Position", 6149);
+            int pidPageSize = findPropertyIdByName(item, "Page Size", 3097);
             int pidFormat = findPropertyIdByName(item, "Format", 4106);
 
             int dpi = options.dpi != null ? options.dpi : 300;
-            log.info("WIA: Item Setup → Intent_PID={} Res_PIDs={} Ext_PIDs={} Format_PID={}", pidIntent, pidXRes,
-                    pidXExt, pidFormat);
+            log.info(
+                    "WIA: Item Setup → Intent_PID={} Res_PIDs={} Ext_PIDs={} Pos_PIDs={} PageSize_PID={} Format_PID={}",
+                    pidIntent, pidXRes, pidXExt, pidXPos, pidPageSize, pidFormat);
 
             setItemInt(item, pidIntent, mapColor(options.colorMode));
             setItemInt(item, pidXRes, dpi);
@@ -373,17 +377,77 @@ public class WIAService {
             // AUTO-SCALE EXTENTS
             int physWidthMil = useFeeder ? getItemInt(device, 3076) : getItemInt(device, 3074);
             int physHeightMil = useFeeder ? getItemInt(device, 3077) : getItemInt(device, 3075);
-            if (physWidthMil > 0 && physHeightMil > 0) {
-                int pxW = (physWidthMil * dpi) / 1000;
-                int pxH = (physHeightMil * dpi) / 1000;
-                // Double-check if this item has extents before setting
+
+            // Paper Size Mapping (Width, Height in thousandths of an inch / mils)
+            int reqWidthMil = physWidthMil;
+            int reqHeightMil = physHeightMil;
+
+            // Fallback to A4 if not provided
+            String paperKey = options.paperSize != null ? options.paperSize.toUpperCase() : "A4";
+            int wiaPageSize = 0; // WIA_IPS_PAGE_SIZE: 0=Manual/UserDefined, 1=A4, 2=Letter, 3=Legal
+
+            switch (paperKey) {
+                case "A4":
+                    reqWidthMil = 8270;
+                    reqHeightMil = 11690;
+                    wiaPageSize = 1;
+                    break;
+                case "LETTER":
+                    reqWidthMil = 8500;
+                    reqHeightMil = 11000;
+                    wiaPageSize = 2;
+                    break;
+                case "LEGAL":
+                    reqWidthMil = 8500;
+                    reqHeightMil = 14000;
+                    wiaPageSize = 3;
+                    break;
+                case "A3":
+                    reqWidthMil = 11690;
+                    reqHeightMil = 16540;
+                    wiaPageSize = 11;
+                    break;
+            }
+
+            // Clamp to physical maximums if known
+            if (physWidthMil > 0 && reqWidthMil > physWidthMil)
+                reqWidthMil = physWidthMil;
+            if (physHeightMil > 0 && reqHeightMil > physHeightMil)
+                reqHeightMil = physHeightMil;
+
+            if (reqWidthMil > 0 && reqHeightMil > 0) {
+                int pxW = (reqWidthMil * dpi) / 1000;
+                int pxH = (reqHeightMil * dpi) / 1000;
+
+                // Force X/Y positions to 0 first (crucial for some drivers to allow extent
+                // changes)
+                setItemInt(item, pidXPos, 0);
+                setItemInt(item, pidYPos, 0);
+
+                // Set Page Size if supported (1=A4, 2=Letter, 3=Legal)
+                if (pidPageSize > 0 && wiaPageSize > 0) {
+                    log.debug("WIA: Setting Page Size (3097) to {}", wiaPageSize);
+                    setItemInt(item, pidPageSize, wiaPageSize);
+                }
+
+                // Set Extents
                 if (pidXExt > 0 && pidYExt > 0) {
-                    log.info("WIA: Scaling extents to {}x{} (Physical bounds: {}x{} mil)", pxW, pxH, physWidthMil,
-                            physHeightMil);
+                    log.info("WIA: Scaling extents for {} to {}x{} pixels ({}x{} mils)",
+                            paperKey, pxW, pxH, reqWidthMil, reqHeightMil);
                     setItemInt(item, pidXExt, pxW);
                     setItemInt(item, pidYExt, pxH);
                 }
             }
+
+            // --- IMAGE ALIGNMENT (DESKEW & AUTO-CROP) ---
+            // 3110 = WIA_IPS_DESKEW (0=Off, 1=On)
+            // 3111 = WIA_IPS_AUTO_CROP (0=Off, 1=Single Page, 2=Multi Page)
+            int pidDeskew = findPropertyIdByName(item, "Deskew", 3110);
+            int pidAutoCrop = findPropertyIdByName(item, "Auto-Crop", 3111);
+            log.info("WIA: Alignment Setup → Deskew_PID={} AutoCrop_PID={}", pidDeskew, pidAutoCrop);
+
+            setItemInt(item, pidDeskew, 1); // Enable Auto-Deskew
+            setItemInt(item, pidAutoCrop, 1); // Enable Auto-Crop (Single Page)
 
             String guid = formatGuid(options.format);
             if (pidFormat > 0) {
@@ -504,7 +568,7 @@ public class WIAService {
             byte[] finalData;
             String fmt = options.format == null ? "pdf" : options.format.toLowerCase();
             if ("pdf".equals(fmt)) {
-                finalData = toPdf(pageDatas);
+                finalData = toPdf(pageDatas, options.paperSize);
             } else {
                 finalData = pageDatas.get(0);
             }
@@ -778,11 +842,29 @@ public class WIAService {
         return data;
     }
 
-    private byte[] toPdf(java.util.List<byte[]> allPages) {
+    private byte[] toPdf(java.util.List<byte[]> allPages, String paperSize) {
         if (allPages == null || allPages.isEmpty())
             return null;
         try (java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream()) {
-            com.itextpdf.text.Document document = new com.itextpdf.text.Document();
+            com.itextpdf.text.Rectangle pageSize = com.itextpdf.text.PageSize.A4;
+            if (paperSize != null) {
+                switch (paperSize.toUpperCase()) {
+                    case "LETTER":
+                        pageSize = com.itextpdf.text.PageSize.LETTER;
+                        break;
+                    case "LEGAL":
+                        pageSize = com.itextpdf.text.PageSize.LEGAL;
+                        break;
+                    case "A4":
+                        pageSize = com.itextpdf.text.PageSize.A4;
+                        break;
+                    case "A3":
+                        pageSize = com.itextpdf.text.PageSize.A3;
+                        break;
+                }
+            }
+
+            com.itextpdf.text.Document document = new com.itextpdf.text.Document(pageSize, 0, 0, 0, 0);
             com.itextpdf.text.pdf.PdfWriter.getInstance(document, baos);
             document.open();
 
@@ -798,7 +880,6 @@ public class WIAService {
                     javax.imageio.ImageIO.write(image, "png", buf);
                     com.itextpdf.text.Image pdfImage = com.itextpdf.text.Image.getInstance(buf.toByteArray());
 
-                    document.setPageSize(com.itextpdf.text.PageSize.A4);
                     document.newPage();
 
                     float maxW = document.getPageSize().getWidth() - document.leftMargin() - document.rightMargin();
@@ -816,10 +897,10 @@ public class WIAService {
         }
     }
 
-    private byte[] toPdf(byte[] imageBytes) {
+    private byte[] toPdf(byte[] imageBytes, String paperSize) {
         java.util.List<byte[]> single = new java.util.ArrayList<>();
         single.add(imageBytes);
-        return toPdf(single);
+        return toPdf(single, paperSize);
     }
 
 }
