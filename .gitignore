@@ -15,6 +15,7 @@ replay_pid*
 *.zip
 *.tar.gz
 *.rar
+CLAUDE.md
 
 # Maven
 target/
@@ -58,6 +59,7 @@ dist/
 dist-fixed/
 dist-swagger/
 lib copy/
+packaging/
 
 # Runtime files
 runtime/bin/*.dll
