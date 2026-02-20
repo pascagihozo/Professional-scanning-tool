@@ -328,6 +328,10 @@ public class ESCLService {
                     wMil = 8500;
                     hMil = 14000;
                     break;
+                case "A3":
+                    wMil = 11690;
+                    hMil = 16540;
+                    break;
                 case "A4":
                 default:
                     wMil = 8270;
@@ -406,6 +410,9 @@ public class ESCLService {
                         break;
                     case "LEGAL":
                         pageSize = com.itextpdf.text.PageSize.LEGAL;
+                        break;
+                    case "A3":
+                        pageSize = com.itextpdf.text.PageSize.A3;
                         break;
                     case "A4":
                         pageSize = com.itextpdf.text.PageSize.A4;
