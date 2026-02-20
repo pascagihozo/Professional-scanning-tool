@@ -59,7 +59,7 @@ dist/
 dist-fixed/
 dist-swagger/
 lib copy/
-packaging/
+packaging/windows/
 
 # Runtime files
 runtime/bin/*.dll
